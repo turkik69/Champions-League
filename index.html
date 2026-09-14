@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-<title> دوري أبطال أوروبا 2026-27</title>
+<title>توقعاتي - دوري أبطال أوروبا 2026-27</title>
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#0A1128">
@@ -155,6 +155,34 @@ main{max-width:700px;margin:0 auto;padding:16px 16px calc(24px + env(safe-area-i
   </div>
 </div>
 
+<!-- PROFILE SETTINGS MODAL -->
+<div id="profileOverlay" onclick="closeProfileSettings(event)" style="position:fixed;inset:0;z-index:550;background:rgba(0,0,0,.7);backdrop-filter:blur(6px);display:none;align-items:center;justify-content:center;padding:20px">
+  <div class="auth-card" style="text-align:right" onclick="event.stopPropagation()">
+    <h2 style="text-align:center;margin-bottom:4px">⚙️ حسابي</h2>
+    <p style="text-align:center">خصّصي تجربتك الخاصة</p>
+    <label style="font-size:.75rem;color:var(--muted);font-weight:700;display:block;margin-bottom:4px">لقبك (يظهر بالترتيب)</label>
+    <input class="fpl-input" id="nicknameInp" placeholder="مثال: أسطورة العزبة ⚡">
+    <label style="font-size:.75rem;color:var(--muted);font-weight:700;display:block;margin:6px 0 4px">لون ثيمك المفضّل — اختاري أي لون تريدينه</label>
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:6px">
+      <input type="color" id="colorPicker" value="#00D4FF" oninput="previewThemeColor(this.value)" style="width:52px;height:52px;border:none;border-radius:14px;cursor:pointer;background:none">
+      <div style="flex:1">
+        <div id="colorPreviewName" style="font-size:.8rem;font-weight:700;color:var(--cyan)">لونك الحالي</div>
+        <div style="font-size:.68rem;color:var(--muted)">يتغيّر ثيم التطبيق بمجرد الاختيار</div>
+      </div>
+    </div>
+    <div id="colorSwatches" style="display:flex;gap:8px;justify-content:center;margin-bottom:14px;flex-wrap:wrap"></div>
+    <div style="display:flex;align-items:center;justify-content:space-between;background:var(--navy);border:1px solid var(--border);border-radius:12px;padding:12px 14px;margin-bottom:14px">
+      <span style="font-size:.85rem;font-weight:700">🔔 تفعيل التذكيرات</span>
+      <label style="position:relative;display:inline-block;width:44px;height:24px">
+        <input type="checkbox" id="notifyToggle" style="opacity:0;width:0;height:0">
+        <span id="notifyTrack" style="position:absolute;inset:0;background:var(--border);border-radius:24px;cursor:pointer;transition:.2s" onclick="toggleNotifySwitch()"></span>
+      </label>
+    </div>
+    <button class="btn-primary" onclick="saveProfileSettings()">حفظ ✓</button>
+    <button class="btn-secondary" onclick="closeProfileSettingsDirect()">إغلاق</button>
+  </div>
+</div>
+
 <header>
   <div class="header-inner">
     <div style="display:flex;align-items:center;gap:10px">
@@ -164,6 +192,7 @@ main{max-width:700px;margin:0 auto;padding:16px 16px calc(24px + env(safe-area-i
     <div class="header-actions">
       <span id="adminBadge" style="display:none">🛡️ مشرف</span>
       <span id="userBadge" style="display:none"></span>
+      <button class="logout-btn" onclick="openProfileSettings()" style="border-color:var(--cyan);color:var(--cyan)">⚙️ حسابي</button>
       <button class="logout-btn" onclick="doLogout()">خروج</button>
     </div>
   </div>
@@ -207,6 +236,8 @@ main{max-width:700px;margin:0 auto;padding:16px 16px calc(24px + env(safe-area-i
       </div>
       <div class="admin-sec">
         <div class="admin-sec-title">⚽ إدخال النتائج — الجولة المختارة أعلاه</div>
+        <div style="font-size:.72rem;color:var(--muted);margin-bottom:10px;line-height:1.6">🔄 المحاولة التلقائية تجلب النتائج من مصدر خارجي وتملأ الخانات فقط — راجعي الرقم واضغطي "حفظ" بنفسك لتأكيدها (لا حفظ تلقائي صامت).</div>
+        <button class="btn-admin" style="width:100%;margin-bottom:12px;padding:10px" onclick="autoFetchResults()" id="autoFetchBtn">🔄 محاولة جلب نتائج هذه الجولة تلقائياً</button>
         <div id="adminMatches"></div>
       </div>
       <div class="admin-sec">
@@ -216,6 +247,9 @@ main{max-width:700px;margin:0 auto;padding:16px 16px calc(24px + env(safe-area-i
     </div>
   </div>
 </main>
+<div style="text-align:center;padding:16px;font-size:.7rem;color:var(--muted)">
+  بيانات النتائج التلقائية عبر <a href="https://sportscore.com/" rel="dofollow" style="color:var(--muted);">SportScore</a>
+</div>
 
 <div id="toast"></div>
 
@@ -247,6 +281,18 @@ async function fbPut(path, val){
 // ── بيانات المباريات: 144 مباراة رسمية عبر 8 جولات (مصدر: UEFA.com) ──
 // الجولة الأولى (8-10 سبتمبر 2026) انتهت فعلياً — نتائجها الحقيقية مُضمّنة (resH/resA)
 // شارات الأندية — أحرف اختصار + ألوان تقريبية (لا شعارات رسمية محمية بحقوق الملكية)
+// أسماء الأندية بالإنجليزية (لتوليد slug عند استدعاء SportScore API)
+const CLUB_EN = {
+  'أ.إي.ك أثينا':'aek-athens','لاسك لينز':'lask','كلوب بروج':'club-brugge','أستون فيلا':'aston-villa',
+  'بوروسيا دورتموند':'borussia-dortmund','فياريال':'villarreal','بورتو':'porto','مانشستر سيتي':'manchester-city',
+  'ليل':'lille','ريال بيتيس':'real-betis','ريال مدريد':'real-madrid','إنتر ميلان':'inter',
+  'برشلونة':'barcelona','فينورد':'feyenoord','شتوتغارت':'stuttgart','فايكينغ':'viking-fk',
+  'ليفربول':'liverpool','أتلتيكو مدريد':'atletico-madrid','باريس سان جيرمان':'paris-saint-germain','سلوفان براتيسلافا':'slovan-bratislava',
+  'سبورتينغ لشبونة':'sporting-cp','غلطة سراي':'galatasaray','نابولي':'napoli','أرسنال':'arsenal',
+  'فنربخشة':'fenerbahce','روما':'roma','بي إس في آيندهوفن':'psv-eindhoven','شاختار دونيتسك':'shakhtar-donetsk',
+  'كومو':'como-1907','لايبزيغ':'rb-leipzig','بايرن ميونخ':'bayern-munich','بودو غليمت':'bodo-glimt',
+  'مانشستر يونايتد':'manchester-united','سابح':'kf-sabail','سلافيا براغ':'slavia-prague','لانس':'rc-lens',
+};
 const CLUB_BADGE = {
   'أ.إي.ك أثينا':['AEK','#FFD500','#000'], 'لاسك لينز':['LSK','#0A0A0A','#fff'],
   'كلوب بروج':['CLB','#005CA9','#fff'], 'أستون فيلا':['AVL','#670E36','#95BFE5'],
@@ -494,13 +540,87 @@ function doLogout(){ localStorage.removeItem('ucl_azba_user'); location.reload()
 
 function loginSuccess(){
   document.getElementById('authOverlay').style.display='none';
-  document.getElementById('userBadge').textContent = currentUser.name;
+  document.getElementById('userBadge').textContent = currentUser.nickname || currentUser.name;
   document.getElementById('userBadge').style.display='inline-block';
   if(currentUser.isAdmin){
     document.getElementById('adminBadge').style.display='inline-block';
     document.getElementById('adminTabBtn').style.display='block';
   }
+  if(currentUser.themeColor) applyThemeColor(currentUser.themeColor);
   renderAll();
+}
+
+// ════════════════════════════════════════════
+// PROFILE SETTINGS — لقب، لون ثيم شخصي، تفعيل التذكيرات
+// ════════════════════════════════════════════
+const THEME_PRESETS = ['#00D4FF','#FFD700','#00E676','#FF3B5C','#A855F7','#FF8C00','#22D3EE','#EC4899'];
+let _pendingThemeColor = null;
+
+function applyThemeColor(hex){
+  document.documentElement.style.setProperty('--cyan', hex);
+  // تدرّج الزر الأساسي يتبع اللون الجديد أيضاً
+  document.documentElement.style.setProperty('--blue', hex);
+}
+function previewThemeColor(hex){
+  _pendingThemeColor = hex;
+  applyThemeColor(hex);
+  document.getElementById('colorPreviewName').textContent = 'لونك الحالي: ' + hex;
+  document.getElementById('colorPreviewName').style.color = hex;
+}
+
+function openProfileSettings(){
+  document.getElementById('nicknameInp').value = currentUser.nickname || '';
+  const currentColor = currentUser.themeColor || '#00D4FF';
+  document.getElementById('colorPicker').value = currentColor;
+  _pendingThemeColor = currentColor;
+  document.getElementById('colorPreviewName').textContent = 'لونك الحالي: ' + currentColor;
+  document.getElementById('colorPreviewName').style.color = currentColor;
+  document.getElementById('colorSwatches').innerHTML = THEME_PRESETS.map(c=>
+    `<button onclick="previewThemeColor('${c}');document.getElementById('colorPicker').value='${c}'" style="width:30px;height:30px;border-radius:50%;background:${c};border:2px solid rgba(255,255,255,.3);cursor:pointer"></button>`
+  ).join('');
+  document.getElementById('notifyToggle').checked = currentUser.notifyEnabled !== false;
+  updateNotifyTrackUI();
+  document.getElementById('profileOverlay').style.display='flex';
+}
+function closeProfileSettings(ev){ if(ev.target.id==='profileOverlay') closeProfileSettingsDirect(); }
+function closeProfileSettingsDirect(){
+  document.getElementById('profileOverlay').style.display='none';
+  // إن أُغلقت دون حفظ، أعد اللون لما كان محفوظاً
+  applyThemeColor(currentUser.themeColor || '#00D4FF');
+}
+function toggleNotifySwitch(){
+  const cb = document.getElementById('notifyToggle');
+  cb.checked = !cb.checked;
+  updateNotifyTrackUI();
+}
+function updateNotifyTrackUI(){
+  const on = document.getElementById('notifyToggle').checked;
+  const track = document.getElementById('notifyTrack');
+  track.style.background = on ? 'var(--cyan)' : 'var(--border)';
+}
+
+async function saveProfileSettings(){
+  const nickname = document.getElementById('nicknameInp').value.trim();
+  const notifyEnabled = document.getElementById('notifyToggle').checked;
+  const themeColor = _pendingThemeColor || '#00D4FF';
+
+  currentUser.nickname = nickname || null;
+  currentUser.themeColor = themeColor;
+  currentUser.notifyEnabled = notifyEnabled;
+  DB.users[currentUser.id] = currentUser;
+
+  await fbPatch(`users/${currentUser.id}`, currentUser);
+
+  document.getElementById('userBadge').textContent = nickname || currentUser.name;
+  applyThemeColor(themeColor);
+
+  if(notifyEnabled && 'Notification' in window && Notification.permission==='default'){
+    Notification.requestPermission();
+  }
+
+  document.getElementById('profileOverlay').style.display='none';
+  showToast('✅ تم حفظ إعداداتك');
+  renderLeaderboard();
 }
 
 // ════════════════════════════════════════════
@@ -549,8 +669,10 @@ function matchStatus(m){
   const res = DB.uclResults[m.id];
   if(res) return 'done';
   const ko = new Date(m.ko);
+  const openTime = new Date(ko.getTime() - 24*3600*1000);
   const lockTime = new Date(ko.getTime() - 3600*1000);
   if(now() >= lockTime) return 'locked';
+  if(now() < openTime) return 'soon'; // لم يُفتح التوقع بعد (أكثر من 24 ساعة على الموعد)
   return 'open';
 }
 function formatDT(iso){
@@ -575,6 +697,7 @@ function buildMatchCard(m){
 
   let badge = status==='open' ? '<span class="badge badge-open">🟢 مفتوح</span>'
     : status==='locked' ? '<span class="badge badge-locked">🔒 مغلق</span>'
+    : status==='soon' ? '<span class="badge badge-locked" style="background:rgba(139,155,199,.15);color:var(--muted)">⏳ يُفتح قبل الموعد بـ24 ساعة</span>'
     : '<span class="badge badge-done">✅ انتهت</span>';
 
   const scoreHTML = res ? `<div class="score-result">${res.h} - ${res.a}</div>` : `<div class="vs-label">VS</div>`;
@@ -606,6 +729,8 @@ function buildMatchCard(m){
       <div><div class="pred-mine-label">توقعك</div><div class="pred-mine-score">${m.home} ${myPred.h}-${myPred.a} ${m.away}</div></div>
       ${ptsBadge}
     </div></div>`;
+  } else if(status==='soon'){
+    predHTML = `<div class="pred-area"><div style="text-align:center;font-size:.75rem;color:var(--muted)">⏳ التوقع لهذه المباراة يُفتح تلقائياً قبل موعدها بـ24 ساعة</div></div>`;
   } else if(status!=='open'){
     predHTML = `<div class="pred-area"><div style="text-align:center;font-size:.75rem;color:var(--muted)">لم تُدخل توقعاً لهذه المباراة</div></div>`;
   }
@@ -643,7 +768,7 @@ async function savePred(id, ev){
 
 function renderLeaderboard(){
   const players = Object.values(DB.users).filter(u=>!u.isAdmin)
-    .map(u=>({id:u.id, name:u.name, pts:totalPts(u.id)}))
+    .map(u=>({id:u.id, name:u.nickname||u.name, pts:totalPts(u.id)}))
     .sort((a,b)=>b.pts-a.pts);
   const el = document.getElementById('lbList');
   if(!players.length){ el.innerHTML = '<div class="f-empty">لا يوجد مشاركون بعد</div>'; return; }
@@ -711,6 +836,51 @@ async function adminDeleteUser(userId){
   renderAdminUsers(); renderLeaderboard();
 }
 
+// محاولة جلب النتائج تلقائياً — بأفضل جهد فقط (مصدر غير موثّق رسمياً)
+// تملأ الخانات ولا تحفظ تلقائياً — المشرف يراجع ويضغط "حفظ" بنفسه
+async function autoFetchResults(){
+  const btn = document.getElementById('autoFetchBtn');
+  btn.disabled = true; btn.textContent = 'جارٍ المحاولة... ⏳';
+  const pending = MATCHES.filter(m=>m.md===currentMD && !DB.uclResults[m.id]);
+  if(!pending.length){ showToast('كل نتائج هذه الجولة مُدخلة بالفعل'); btn.disabled=false; btn.textContent='🔄 محاولة جلب نتائج هذه الجولة تلقائياً'; return; }
+
+  let found = 0, tried = 0;
+  for(const m of pending){
+    const slug = CLUB_EN[m.home];
+    if(!slug) continue;
+    tried++;
+    try{
+      const controller = new AbortController();
+      const timer = setTimeout(()=>controller.abort(), 3500);
+      const r = await fetch(`https://sportscore.com/api/widget/team/?sport=football&slug=${slug}&limit=10&src=ucl-azba-app`, {signal:controller.signal});
+      clearTimeout(timer);
+      if(!r.ok) continue;
+      const data = await r.json();
+      const fixtures = data.fixtures || data.matches || data.data || [];
+      // محاولة دفاعية لإيجاد المباراة المطابقة عبر عدة أسماء حقول محتملة
+      const awayEn = CLUB_EN[m.away];
+      const match = fixtures.find(fx=>{
+        const homeN = (fx.home_team?.name || fx.homeTeam?.name || fx.home?.name || fx.home_team_name || '').toLowerCase();
+        const awayN = (fx.away_team?.name || fx.awayTeam?.name || fx.away?.name || fx.away_team_name || '').toLowerCase();
+        const st = (fx.status || fx.state || '').toLowerCase();
+        const isFinished = st.includes('finish') || st.includes('ft') || st.includes('ended');
+        return isFinished && (awayEn && (homeN.includes(awayEn.split('-')[0])||awayN.includes(awayEn.split('-')[0])));
+      });
+      if(match){
+        const hs = match.score?.home ?? match.home_score ?? match.scores?.home ?? null;
+        const as = match.score?.away ?? match.away_score ?? match.scores?.away ?? null;
+        if(hs!=null && as!=null){
+          const hInp = document.getElementById('ah_'+m.id), aInp = document.getElementById('aa_'+m.id);
+          if(hInp && aInp){ hInp.value = hs; aInp.value = as; hInp.style.borderColor='var(--green)'; aInp.style.borderColor='var(--green)'; found++; }
+        }
+      }
+    }catch(e){ /* تجاهل صامت — لا نكسر بقية المحاولات */ }
+  }
+  btn.disabled = false; btn.textContent = '🔄 محاولة جلب نتائج هذه الجولة تلقائياً';
+  if(found>0) showToast(`✅ وُجدت ${found} نتيجة محتملة — راجعيها واضغطي حفظ لكل مباراة`);
+  else showToast(`⏳ لم تُوجد نتائج جاهزة الآن (${tried} محاولة) — أدخلي يدوياً`);
+}
+
 async function adminSaveResult(id){
   const h = parseInt(document.getElementById('ah_'+id).value);
   const a = parseInt(document.getElementById('aa_'+id).value);
@@ -737,10 +907,55 @@ function showToast(msg){
   setTimeout(()=>t.classList.remove('show'), 2800);
 }
 
+// ════════════════════════════════════════════
+// تذكيرات محلية — فتح/إغلاق التوقعات
+// صادق: تعمل فقط طالما المتصفح مفتوحاً بالخلفية (تبويب حيّ) — ليست دفعاً حقيقياً للهاتف المغلق تماماً
+// ════════════════════════════════════════════
+function alreadyNotified(key){
+  const seen = JSON.parse(localStorage.getItem('ucl_notified')||'[]');
+  return seen.includes(key);
+}
+function markNotified(key){
+  const seen = JSON.parse(localStorage.getItem('ucl_notified')||'[]');
+  seen.push(key);
+  if(seen.length>300) seen.splice(0, seen.length-300);
+  localStorage.setItem('ucl_notified', JSON.stringify(seen));
+}
+function fireNotification(title, body){
+  if('Notification' in window && Notification.permission==='granted'){
+    try{ new Notification(title, {body, icon:'ucl-icon-192.png'}); }catch(e){}
+  }
+  showToast(`🔔 ${title}`);
+}
+function checkReminders(){
+  if(!currentUser || currentUser.notifyEnabled===false) return;
+  const t = now();
+  MATCHES.forEach(m=>{
+    if(DB.uclResults[m.id]) return;
+    const ko = new Date(m.ko);
+    const openTime = new Date(ko.getTime() - 24*3600*1000);
+    const lockTime = new Date(ko.getTime() - 3600*1000);
+    // تذكير الفتح: خلال أول 10 دقائق من لحظة الفتح
+    if(t>=openTime && t < new Date(openTime.getTime()+10*60000)){
+      const key = `open_${m.id}`;
+      if(!alreadyNotified(key)){ fireNotification('فُتح التوقع الآن ⚽', `${m.home} ضد ${m.away} — لديك 24 ساعة للتوقع`); markNotified(key); }
+    }
+    // تذكير الإغلاق: قبل 15 دقيقة من الإغلاق (أي قبل 75 دقيقة من الموعد)
+    const warnTime = new Date(lockTime.getTime() - 15*60000);
+    if(t>=warnTime && t<lockTime){
+      const key = `close_${m.id}`;
+      if(!alreadyNotified(key)){ fireNotification('التوقع يُغلق قريباً ⏳', `${m.home} ضد ${m.away} — أمامك 15 دقيقة فقط`); markNotified(key); }
+    }
+  });
+}
+
 window.addEventListener('DOMContentLoaded', async ()=>{
   await loadDatabase();
   checkSession();
   document.getElementById('loadingOverlay').style.display='none';
+  checkReminders();
+  setInterval(checkReminders, 5*60*1000); // كل 5 دقائق طالما التطبيق مفتوحاً
+  setInterval(async ()=>{ await loadDatabase(); renderMatches(); renderLeaderboard(); if(currentUser?.isAdmin) renderAdmin(); }, 60*1000);
 });
 </script>
 </body>
