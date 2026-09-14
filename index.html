@@ -183,16 +183,6 @@ main{max-width:700px;margin:0 auto;padding:16px 16px calc(24px + env(safe-area-i
   </div>
 </div>
 
-<!-- MESSAGES DRAWER -->
-<div id="msgOverlay" onclick="closeMsgDrawer(event)" style="position:fixed;inset:0;z-index:550;background:rgba(0,0,0,.7);backdrop-filter:blur(6px);display:none;align-items:flex-end;justify-content:center;padding:0">
-  <div style="background:var(--card);border:1px solid var(--border);border-radius:20px 20px 0 0;width:100%;max-width:480px;max-height:75vh;overflow-y:auto;padding:20px;box-shadow:var(--el-4)" onclick="event.stopPropagation()">
-    <div style="width:38px;height:4px;background:var(--border);border-radius:2px;margin:0 auto 14px"></div>
-    <h2 style="text-align:center;margin-bottom:14px">🔔 رسائل الإدارة</h2>
-    <div id="msgList"></div>
-    <button class="btn-secondary" onclick="closeMsgDrawerDirect()">إغلاق</button>
-  </div>
-</div>
-
 <header>
   <div class="header-inner">
     <div style="display:flex;align-items:center;gap:10px">
@@ -202,7 +192,6 @@ main{max-width:700px;margin:0 auto;padding:16px 16px calc(24px + env(safe-area-i
     <div class="header-actions">
       <span id="adminBadge" style="display:none">🛡️ مشرف</span>
       <span id="userBadge" style="display:none"></span>
-      <button class="logout-btn" onclick="openMessagesDrawer()" style="position:relative;border-color:var(--gold);color:var(--gold)">🔔 الرسائل<span id="msgBadge" style="display:none;position:absolute;top:-6px;left:-6px;background:var(--red);color:#fff;font-size:.6rem;font-weight:900;min-width:16px;height:16px;border-radius:8px;display:flex;align-items:center;justify-content:center;padding:0 4px">0</span></button>
       <button class="logout-btn" onclick="openProfileSettings()" style="border-color:var(--cyan);color:var(--cyan)">⚙️ حسابي</button>
       <button class="logout-btn" onclick="doLogout()">خروج</button>
     </div>
@@ -697,12 +686,12 @@ function matchStatus(m){
   return 'open';
 }
 function formatDT(iso){
-  const d = new Date(iso);
+  const d = new Date(new Date(iso).getTime() + 4*3600*1000); // تحويل لتوقيت مسقط (UTC+4، بلا توقيت صيفي)
   const days=['الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'];
   const months=['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
   const hh = d.getUTCHours().toString().padStart(2,'0');
   const mm = d.getUTCMinutes().toString().padStart(2,'0');
-  return `${days[d.getUTCDay()]} ${d.getUTCDate()} ${months[d.getUTCMonth()]} · ${hh}:${mm} UTC`;
+  return `${days[d.getUTCDay()]} ${d.getUTCDate()} ${months[d.getUTCMonth()]} · ${hh}:${mm} (مسقط)`;
 }
 
 function renderMatches(){
