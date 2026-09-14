@@ -209,6 +209,10 @@ main{max-width:700px;margin:0 auto;padding:16px 16px calc(24px + env(safe-area-i
         <div class="admin-sec-title">⚽ إدخال النتائج — الجولة المختارة أعلاه</div>
         <div id="adminMatches"></div>
       </div>
+      <div class="admin-sec">
+        <div class="admin-sec-title">👥 إدارة المشاركين</div>
+        <div id="adminUsers"></div>
+      </div>
     </div>
   </div>
 </main>
@@ -242,6 +246,32 @@ async function fbPut(path, val){
 
 // ── بيانات المباريات: 144 مباراة رسمية عبر 8 جولات (مصدر: UEFA.com) ──
 // الجولة الأولى (8-10 سبتمبر 2026) انتهت فعلياً — نتائجها الحقيقية مُضمّنة (resH/resA)
+// شارات الأندية — أحرف اختصار + ألوان تقريبية (لا شعارات رسمية محمية بحقوق الملكية)
+const CLUB_BADGE = {
+  'أ.إي.ك أثينا':['AEK','#FFD500','#000'], 'لاسك لينز':['LSK','#0A0A0A','#fff'],
+  'كلوب بروج':['CLB','#005CA9','#fff'], 'أستون فيلا':['AVL','#670E36','#95BFE5'],
+  'بوروسيا دورتموند':['BVB','#FDE100','#000'], 'فياريال':['VIL','#FFE667','#005187'],
+  'بورتو':['POR','#0B4EA2','#fff'], 'مانشستر سيتي':['MCI','#6CABDD','#fff'],
+  'ليل':['LOS','#C10000','#fff'], 'ريال بيتيس':['BET','#00A650','#fff'],
+  'ريال مدريد':['RMA','#FFFFFF','#00529F'], 'إنتر ميلان':['INT','#010E80','#fff'],
+  'برشلونة':['BAR','#A50044','#004D98'], 'فينورد':['FEY','#E1000F','#fff'],
+  'شتوتغارت':['VFB','#E0001F','#fff'], 'فايكينغ':['VIK','#003399','#fff'],
+  'ليفربول':['LIV','#C8102E','#fff'], 'أتلتيكو مدريد':['ATM','#CB3524','#272E61'],
+  'باريس سان جيرمان':['PSG','#004170','#DA291C'], 'سلوفان براتيسلافا':['SLB','#5DBFEB','#003057'],
+  'سبورتينغ لشبونة':['SCP','#008542','#fff'], 'غلطة سراي':['GAL','#FFB300','#A90432'],
+  'نابولي':['NAP','#12A0D7','#fff'], 'أرسنال':['ARS','#EF0107','#fff'],
+  'فنربخشة':['FB','#FFDD00','#003399'], 'روما':['ROM','#8E1F2F','#F0BC42'],
+  'بي إس في آيندهوفن':['PSV','#ED1C24','#fff'], 'شاختار دونيتسك':['SHK','#FF6600','#000'],
+  'كومو':['COM','#0057A8','#fff'], 'لايبزيغ':['RBL','#DD0741','#fff'],
+  'بايرن ميونخ':['BAY','#DC052D','#0066B2'], 'بودو غليمت':['BOD','#FFD700','#000'],
+  'مانشستر يونايتد':['MUN','#DA020E','#FBE122'], 'سابح':['SAB','#C8102E','#00205B'],
+  'سلافيا براغ':['SLA','#C8102E','#fff'], 'لانس':['LEN','#FFD100','#C8102E'],
+};
+function clubBadge(name){
+  const b = CLUB_BADGE[name] || ['—','#333','#fff'];
+  return `<span style="display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:50%;background:${b[1]};color:${b[2]};font-size:.55rem;font-weight:900;flex-shrink:0;box-shadow:0 2px 4px rgba(0,0,0,.3);border:1px solid rgba(255,255,255,.15)">${b[0]}</span>`;
+}
+
 const MATCHES = [
   {id:'ucl_m1',md:1,home:'أ.إي.ك أثينا',away:'لاسك لينز',ko:'2026-09-08T19:00:00Z',resH:1,resA:0},
   {id:'ucl_m2',md:1,home:'كلوب بروج',away:'أستون فيلا',ko:'2026-09-08T19:00:00Z',resH:2,resA:3},
@@ -583,9 +613,9 @@ function buildMatchCard(m){
   return `<div class="match-card" id="card-${m.id}">
     <div class="match-top"><div class="match-time">${formatDT(m.ko)}</div>${badge}</div>
     <div class="teams-row">
-      <div class="team"><div class="team-name">${m.home}</div></div>
+      <div class="team" style="display:flex;flex-direction:column;align-items:center;gap:5px">${clubBadge(m.home)}<div class="team-name">${m.home}</div></div>
       <div class="vs-area">${scoreHTML}</div>
-      <div class="team"><div class="team-name">${m.away}</div></div>
+      <div class="team" style="display:flex;flex-direction:column;align-items:center;gap:5px">${clubBadge(m.away)}<div class="team-name">${m.away}</div></div>
     </div>
     ${predHTML}
   </div>`;
@@ -641,7 +671,7 @@ function renderAdmin(){
   document.getElementById('adminMatches').innerHTML = list.map(m=>{
     const r = DB.uclResults[m.id];
     return `<div class="admin-match-item">
-      <div class="admin-match-title">${r?`<span class="result-badge">${r.h}-${r.a}</span>`:''}${m.home} vs ${m.away}</div>
+      <div class="admin-match-title" style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">${r?`<span class="result-badge">${r.h}-${r.a}</span>`:''}${clubBadge(m.home)} ${m.home} vs ${m.away} ${clubBadge(m.away)}</div>
       <div class="admin-score-row">
         <input class="admin-inp" type="number" id="ah_${m.id}" value="${r?.h??''}" min="0" placeholder="0">
         <span style="color:var(--muted)">-</span>
@@ -650,6 +680,35 @@ function renderAdmin(){
       </div>
     </div>`;
   }).join('');
+
+  renderAdminUsers();
+}
+
+function renderAdminUsers(){
+  const participants = Object.entries(DB.users).filter(([id,u])=>!u.isAdmin);
+  const el = document.getElementById('adminUsers');
+  if(!participants.length){ el.innerHTML = '<div style="font-size:.78rem;color:var(--muted)">لا يوجد مشاركون مسجّلون بعد</div>'; return; }
+  el.innerHTML = participants.map(([id,u])=>{
+    const pts = totalPts(id);
+    return `<div class="admin-match-item" style="display:flex;align-items:center;justify-content:space-between">
+      <div><div style="font-weight:700;font-size:.82rem">${u.name}</div><div style="font-size:.68rem;color:var(--muted)">${pts} نقطة</div></div>
+      <button class="btn-admin" style="background:linear-gradient(135deg,var(--red),#B8003F)" onclick="adminDeleteUser('${id}')">🗑️ حذف</button>
+    </div>`;
+  }).join('');
+}
+
+async function adminDeleteUser(userId){
+  const u = DB.users[userId];
+  if(!u) return;
+  if(!confirm(`⚠️ حذف "${u.name}" نهائياً مع كل توقعاته؟ لا يمكن التراجع!`)) return;
+  delete DB.users[userId];
+  delete DB.uclPredictions[userId];
+  await Promise.all([
+    fetch(`${FB_URL}/users/${userId}.json`, {method:'DELETE'}),
+    fetch(`${FB_URL}/uclPredictions/${userId}.json`, {method:'DELETE'}),
+  ]);
+  showToast(`✅ تم حذف ${u.name}`);
+  renderAdminUsers(); renderLeaderboard();
 }
 
 async function adminSaveResult(id){
