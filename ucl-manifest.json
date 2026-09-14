@@ -2,7 +2,7 @@
   "name": "توقعاتي - دوري أبطال أوروبا",
   "short_name": "أبطال أوروبا",
   "description": "مسابقة توقعات دوري أبطال أوروبا 2026-27",
-  "start_url": "./ucl2026.html",
+  "start_url": "./",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait",
