@@ -159,10 +159,10 @@ main{max-width:700px;margin:0 auto;padding:16px 16px calc(24px + env(safe-area-i
 <div id="profileOverlay" onclick="closeProfileSettings(event)" style="position:fixed;inset:0;z-index:550;background:rgba(0,0,0,.7);backdrop-filter:blur(6px);display:none;align-items:center;justify-content:center;padding:20px">
   <div class="auth-card" style="text-align:right" onclick="event.stopPropagation()">
     <h2 style="text-align:center;margin-bottom:4px">⚙️ حسابي</h2>
-    <p style="text-align:center">خصّصي تجربتك الخاصة</p>
+    <p style="text-align:center">خصّص تجربتك الخاصة</p>
     <label style="font-size:.75rem;color:var(--muted);font-weight:700;display:block;margin-bottom:4px">لقبك (يظهر بالترتيب)</label>
     <input class="fpl-input" id="nicknameInp" placeholder="مثال: أسطورة العزبة ⚡">
-    <label style="font-size:.75rem;color:var(--muted);font-weight:700;display:block;margin:6px 0 4px">لون ثيمك المفضّل — اختاري أي لون تريدينه</label>
+    <label style="font-size:.75rem;color:var(--muted);font-weight:700;display:block;margin:6px 0 4px">لون ثيمك المفضّل — اختر أي لون تريده</label>
     <div style="display:flex;align-items:center;gap:12px;margin-bottom:6px">
       <input type="color" id="colorPicker" value="#00D4FF" oninput="previewThemeColor(this.value)" style="width:52px;height:52px;border:none;border-radius:14px;cursor:pointer;background:none">
       <div style="flex:1">
@@ -247,14 +247,14 @@ main{max-width:700px;margin:0 auto;padding:16px 16px calc(24px + env(safe-area-i
       </div>
       <div class="admin-sec">
         <div class="admin-sec-title">⚽ إدخال النتائج — الجولة المختارة أعلاه</div>
-        <div style="font-size:.72rem;color:var(--muted);margin-bottom:10px;line-height:1.6">🔄 المحاولة التلقائية تجلب النتائج من مصدر خارجي وتملأ الخانات فقط — راجعي الرقم واضغطي "حفظ" بنفسك لتأكيدها (لا حفظ تلقائي صامت).</div>
+        <div style="font-size:.72rem;color:var(--muted);margin-bottom:10px;line-height:1.6">🔄 المحاولة التلقائية تجلب النتائج من مصدر خارجي وتملأ الخانات فقط — راجع الرقم واضغط "حفظ" بنفسك لتأكيدها (لا حفظ تلقائي صامت).</div>
         <button class="btn-admin" style="width:100%;margin-bottom:12px;padding:10px" onclick="autoFetchResults()" id="autoFetchBtn">🔄 محاولة جلب نتائج هذه الجولة تلقائياً</button>
         <div id="adminMatches"></div>
       </div>
       <div class="admin-sec">
         <div class="admin-sec-title">📢 إرسال رسالة/إشعار للمشاركين</div>
         <input class="fpl-input" id="msgTitleInp" placeholder="عنوان الرسالة (اختياري)">
-        <textarea class="fpl-input" id="msgBodyInp" placeholder="اكتبي رسالتك هنا..." style="min-height:80px;resize:vertical"></textarea>
+        <textarea class="fpl-input" id="msgBodyInp" placeholder="اكتب رسالتك هنا..." style="min-height:80px;resize:vertical"></textarea>
         <button class="btn-admin" style="width:100%;padding:10px" onclick="sendAdminMessage()">📤 إرسال للجميع الآن</button>
         <div style="font-size:.7rem;color:var(--muted);margin-top:8px">تصل فوراً كإشعار داخل التطبيق لكل مشارك، وكإشعار متصفح لمن فعّل التذكيرات بحسابه.</div>
         <div id="adminMessagesList" style="margin-top:14px"></div>
@@ -899,8 +899,8 @@ async function autoFetchResults(){
     }catch(e){ /* تجاهل صامت — لا نكسر بقية المحاولات */ }
   }
   btn.disabled = false; btn.textContent = '🔄 محاولة جلب نتائج هذه الجولة تلقائياً';
-  if(found>0) showToast(`✅ وُجدت ${found} نتيجة محتملة — راجعيها واضغطي حفظ لكل مباراة`);
-  else showToast(`⏳ لم تُوجد نتائج جاهزة الآن (${tried} محاولة) — أدخلي يدوياً`);
+  if(found>0) showToast(`✅ وُجدت ${found} نتيجة محتملة — راجعها واضغط حفظ لكل مباراة`);
+  else showToast(`⏳ لم تُوجد نتائج جاهزة الآن (${tried} محاولة) — أدخل يدوياً`);
 }
 
 async function adminSaveResult(id){
@@ -955,7 +955,7 @@ function fireNotification(title, body){
 async function sendAdminMessage(){
   const title = document.getElementById('msgTitleInp').value.trim();
   const body = document.getElementById('msgBodyInp').value.trim();
-  if(!body){ showToast('⚠️ اكتبي نص الرسالة أولاً'); return; }
+  if(!body){ showToast('⚠️ اكتب نص الرسالة أولاً'); return; }
   const id = 'msg_' + Date.now();
   const msg = { title: title||'رسالة من الإدارة', body, ts: Date.now(), from: currentUser.name };
   DB.announcements[id] = msg;
@@ -1001,7 +1001,7 @@ function checkNewMessages(){
   const unread = unreadMessageIds();
   updateMsgBadge();
   if(!unread.length) return;
-  // أرسلي إشعار متصفح لكل رسالة جديدة لم تُعرَض من قبل (إن كان التنبيه مفعّلاً)
+  // أرسل إشعار متصفح لكل رسالة جديدة لم تُعرَض من قبل (إن كان التنبيه مفعّلاً)
   if(currentUser.notifyEnabled!==false){
     unread.forEach(id=>{
       const m = DB.announcements[id];
