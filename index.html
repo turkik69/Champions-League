@@ -1,0 +1,688 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>توقعاتي - دوري أبطال أوروبا 2026-27</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0A1128">
+<link rel="manifest" href="ucl-manifest.json">
+<link rel="apple-touch-icon" href="ucl-icon-192.png">
+<link href="https://fonts.googleapis.com/css2?family=Changa:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --navy:#0A1128; --navy2:#0F1B3C; --card:#131F45; --card2:#1A2A5C; --border:#2A3A6C;
+  --text:#EAF0FF; --muted:#8B9BC7; --silver:#C4CEE8; --blue:#0066FF; --cyan:#00D4FF;
+  --gold:#FFD700; --green:#00E676; --red:#FF3B5C;
+  --el-1:0 2px 8px rgba(0,0,0,.35); --el-2:0 4px 16px rgba(0,0,0,.4); --el-3:0 8px 24px rgba(0,0,0,.45); --el-4:0 16px 48px rgba(0,0,0,.55);
+  --dur:250ms; --ease:cubic-bezier(.4,0,.2,1); --ease-spring:cubic-bezier(.32,0,.15,1);
+}
+*{box-sizing:border-box;margin:0;padding:0;font-family:'Changa',sans-serif;-webkit-tap-highlight-color:transparent}
+body{background:var(--navy);color:var(--text);min-height:100vh;touch-action:manipulation;overscroll-behavior-y:none}
+html{overscroll-behavior-y:none}
+
+#loadingOverlay{position:fixed;inset:0;background:var(--navy);z-index:999;padding-top:calc(24px + env(safe-area-inset-top,0px));overflow:hidden}
+.skel-wrap{max-width:600px;margin:0 auto;padding:16px 20px}
+.skel{background:linear-gradient(90deg,var(--card2) 25%,var(--border) 50%,var(--card2) 75%);background-size:200% 100%;animation:shine 1.4s ease-in-out infinite;border-radius:12px}
+@keyframes shine{0%{background-position:200% 0}100%{background-position:-200% 0}}
+.skel-title{height:22px;width:55%;margin-bottom:20px}
+.skel-card{height:90px;margin-bottom:12px;border-radius:14px}
+
+header{background:linear-gradient(135deg,#050A1A 0%,#0A1128 50%,#0F1B3C 100%);border-bottom:2px solid var(--cyan);position:sticky;top:0;z-index:100;box-shadow:var(--el-2);padding-top:env(safe-area-inset-top,0px)}
+.header-inner{max-width:1100px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;padding:14px 20px;flex-wrap:wrap;gap:10px}
+.logo-text h1{font-size:1.15rem;font-weight:800;background:linear-gradient(90deg,var(--cyan),var(--silver));-webkit-background-clip:text;background-clip:text;color:transparent}
+.logo-text p{font-size:.72rem;color:var(--muted);font-weight:600}
+.star-icon{font-size:1.8rem;filter:drop-shadow(0 0 8px rgba(0,212,255,.6));animation:pulse 3s ease-in-out infinite}
+@keyframes pulse{0%,100%{filter:drop-shadow(0 0 8px rgba(0,212,255,.5))}50%{filter:drop-shadow(0 0 16px rgba(0,212,255,.9))}}
+.header-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+#userBadge{font-size:.8rem;font-weight:700;background:rgba(0,212,255,.12);border:1px solid rgba(0,212,255,.35);padding:6px 14px;border-radius:20px;color:var(--cyan)}
+#adminBadge{font-size:.72rem;font-weight:800;background:rgba(255,215,0,.15);border:1px solid rgba(255,215,0,.4);padding:5px 12px;border-radius:20px;color:var(--gold)}
+.logout-btn{font-size:.75rem;padding:6px 14px;background:none;border:1px solid var(--border);border-radius:20px;color:var(--muted);cursor:pointer}
+
+.tabs{max-width:1100px;margin:0 auto;display:flex;border-bottom:2px solid var(--border);padding:0 20px;overflow-x:auto}
+.tab-btn{padding:14px 18px;background:none;border:none;color:var(--muted);font-size:.85rem;font-weight:700;cursor:pointer;border-bottom:3px solid transparent;margin-bottom:-2px;transition:all var(--dur);white-space:nowrap}
+.tab-btn.active{color:var(--cyan);border-bottom-color:var(--cyan)}
+main{max-width:700px;margin:0 auto;padding:16px 16px calc(24px + env(safe-area-inset-bottom,0px))}
+.tab-pane{display:none}
+.tab-pane.active{display:block}
+
+/* Auth */
+#authOverlay{position:fixed;inset:0;background:var(--navy);z-index:500;display:flex;align-items:center;justify-content:center;padding:20px}
+.auth-card{background:var(--card);border:1px solid var(--border);border-radius:22px;padding:32px 24px;width:100%;max-width:400px;text-align:center;box-shadow:var(--el-4)}
+.auth-card .star-icon{font-size:3rem;margin-bottom:10px;display:block}
+.auth-card h2{font-size:1.3rem;font-weight:800;margin-bottom:6px}
+.auth-card p{font-size:.8rem;color:var(--muted);margin-bottom:22px}
+.fpl-input{width:100%;padding:12px 14px;background:var(--navy);border:1.5px solid var(--border);border-radius:12px;color:var(--text);font-size:.9rem;margin-bottom:10px;outline:none;transition:border-color var(--dur)}
+.fpl-input:focus{border-color:var(--cyan);box-shadow:0 0 0 3px rgba(0,212,255,.15)}
+.btn-primary{width:100%;padding:13px;background:linear-gradient(135deg,var(--blue),var(--cyan));color:#fff;border:none;border-radius:12px;font-weight:800;font-size:.95rem;cursor:pointer;box-shadow:0 4px 14px rgba(0,102,255,.35);transition:transform .15s}
+.btn-primary:active{transform:scale(.97)}
+.btn-secondary{width:100%;padding:11px;background:rgba(255,255,255,.06);border:1px solid var(--border);color:var(--text);border-radius:12px;font-weight:700;font-size:.82rem;cursor:pointer;margin-top:8px;transition:transform .15s}
+.btn-secondary:active{transform:scale(.97)}
+.auth-divider{font-size:.72rem;color:var(--muted);margin:14px 0}
+
+/* Matchday selector */
+.md-selector{display:flex;gap:6px;overflow-x:auto;padding-bottom:6px;margin-bottom:16px}
+.md-btn{flex-shrink:0;padding:9px 16px;background:var(--card);border:1.5px solid var(--border);border-radius:20px;color:var(--muted);font-size:.8rem;font-weight:700;cursor:pointer;white-space:nowrap;transition:all var(--dur)}
+.md-btn.active{background:linear-gradient(135deg,var(--blue),var(--cyan));border-color:transparent;color:#fff}
+.md-btn.md-done{border-color:var(--green);color:var(--green)}
+.md-btn.md-done.active{background:linear-gradient(135deg,var(--green),#00B368);color:#000}
+
+@keyframes cardIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+.match-card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:14px 16px;margin-bottom:10px;box-shadow:var(--el-1);animation:cardIn .35s var(--ease) backwards}
+.match-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+.match-time{font-size:.68rem;color:var(--muted);font-weight:700}
+.badge{font-size:.62rem;font-weight:800;padding:3px 9px;border-radius:8px}
+.badge-open{background:rgba(0,230,118,.15);color:var(--green)}
+.badge-locked{background:rgba(255,215,0,.15);color:var(--gold)}
+.badge-done{background:rgba(139,155,199,.15);color:var(--muted)}
+.teams-row{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.team{flex:1;text-align:center}
+.team-name{font-size:.82rem;font-weight:700;line-height:1.25}
+.vs-area{padding:0 6px;text-align:center;min-width:70px}
+.score-result{font-size:1.3rem;font-weight:900;color:var(--cyan)}
+.vs-label{font-size:.75rem;color:var(--muted);font-weight:700}
+.pred-area{margin-top:12px;padding-top:12px;border-top:1px dashed var(--border)}
+.score-inputs{display:flex;align-items:center;justify-content:center;gap:10px}
+.score-input-wrap{display:flex;align-items:center;background:var(--navy);border:1.5px solid var(--border);border-radius:10px;overflow:hidden;transition:border-color var(--dur)}
+.score-input-wrap:focus-within{border-color:var(--cyan)}
+.score-input-wrap button{width:30px;height:36px;background:rgba(255,255,255,.05);border:none;color:var(--text);font-size:1.1rem;cursor:pointer}
+.score-num{width:36px;height:36px;text-align:center;background:none;border:none;color:var(--text);font-size:1rem;font-weight:800;outline:none;-moz-appearance:textfield}
+.score-num::-webkit-outer-spin-button,.score-num::-webkit-inner-spin-button{-webkit-appearance:none}
+.save-pred-btn{margin-top:10px;width:100%;padding:9px;background:linear-gradient(135deg,var(--blue),var(--cyan));border:none;border-radius:8px;color:#fff;font-size:.85rem;font-weight:800;cursor:pointer}
+.my-pred-display{display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:var(--navy2);border-radius:10px;margin-top:8px}
+.pred-mine-label{font-size:.65rem;color:var(--muted);font-weight:700}
+.pred-mine-score{font-size:.85rem;font-weight:800;color:var(--silver)}
+.pts-badge{font-size:.68rem;font-weight:900;padding:3px 10px;border-radius:10px}
+.pts-3{background:rgba(0,230,118,.2);color:var(--green)}
+.pts-1{background:rgba(0,212,255,.2);color:var(--cyan)}
+.pts-0{background:rgba(255,59,92,.12);color:var(--red)}
+
+.lb-list{display:flex;flex-direction:column;gap:8px}
+.lb-row{display:flex;align-items:center;gap:12px;background:var(--card);border:1px solid var(--border);border-radius:14px;padding:10px 14px;box-shadow:var(--el-1);animation:cardIn .35s var(--ease) backwards}
+.lb-rank{flex-shrink:0;width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:.9rem;background:var(--card2);color:var(--muted)}
+.lb-rank.r1{background:linear-gradient(135deg,#FFD700,#B8860B);color:#2B1A00;box-shadow:0 0 14px rgba(255,215,0,.4)}
+.lb-rank.r2{background:linear-gradient(135deg,#E8E8E8,#A0A0A0);color:#222}
+.lb-rank.r3{background:linear-gradient(135deg,#CD7F32,#8B5A2B);color:#fff}
+.lb-info{flex:1}
+.lb-name{font-weight:700;font-size:.88rem}
+.lb-pts{font-weight:900;font-size:1.1rem;color:var(--cyan)}
+.lb-row.me{background:rgba(0,212,255,.06);border-color:rgba(0,212,255,.35)}
+
+.rules-box{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:16px;margin-bottom:14px}
+.rules-box h3{font-size:.92rem;color:var(--cyan);margin-bottom:12px}
+.rule-item{display:flex;align-items:center;gap:12px;padding:9px 0;border-bottom:1px solid var(--border)}
+.rule-pts{width:34px;height:34px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:.95rem;flex-shrink:0}
+.rule-desc{font-weight:700;font-size:.82rem}
+.rule-sub{font-size:.7rem;color:var(--muted);margin-top:1px}
+
+.admin-panel h3{font-size:1rem;margin-bottom:14px;color:var(--gold)}
+.admin-sec{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:14px;margin-bottom:12px}
+.admin-sec-title{font-size:.8rem;font-weight:800;color:var(--muted);margin-bottom:10px}
+.admin-match-item{background:var(--navy);border-radius:10px;padding:10px;margin-bottom:8px}
+.admin-match-title{font-size:.78rem;font-weight:700;margin-bottom:8px}
+.admin-score-row{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.admin-inp{width:44px;padding:7px;background:var(--card);border:1px solid var(--border);border-radius:6px;color:var(--text);text-align:center;font-weight:800}
+.btn-admin{padding:7px 14px;background:linear-gradient(135deg,var(--blue),#0044AA);border:none;border-radius:8px;color:#fff;font-size:.75rem;font-weight:700;cursor:pointer}
+.result-badge{background:rgba(0,230,118,.15);color:var(--green);padding:2px 8px;border-radius:6px;font-size:.68rem;font-weight:800;margin-left:6px}
+
+#toast{position:fixed;bottom:calc(22px + env(safe-area-inset-bottom,0px));left:50%;transform:translateX(-50%) translateY(80px) scale(.9);opacity:0;background:var(--card);border:1px solid var(--cyan);border-radius:9px;padding:10px 22px;font-size:.85rem;font-weight:700;color:var(--cyan);z-index:600;transition:all var(--dur) var(--ease-spring);box-shadow:var(--el-3);white-space:nowrap}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0) scale(1)}
+.f-empty{text-align:center;padding:32px 12px;color:var(--muted);font-size:.85rem}
+</style>
+</head>
+<body>
+
+<div id="loadingOverlay">
+  <div class="skel-wrap">
+    <div class="skel skel-title"></div>
+    <div class="skel skel-card"></div>
+    <div class="skel skel-card"></div>
+    <div class="skel skel-card"></div>
+  </div>
+</div>
+
+<div id="authOverlay">
+  <div class="auth-card" id="authCard">
+    <img src="ucl-icon-512.png" style="width:80px;height:80px;border-radius:20px;margin-bottom:10px" alt="دوري الأبطال">
+    <h2>توقعاتي — دوري أبطال أوروبا</h2>
+    <p>موسم 2026-27 · تنافس مع نفس مشاركي فانتزي العزبة</p>
+    <input class="fpl-input" id="loginFirstName" placeholder="اسمك الأول">
+    <input class="fpl-input" id="loginTribeName" placeholder="اسم العائلة / القبيلة">
+    <button class="btn-primary" onclick="submitLogin()">دخول</button>
+    <div class="auth-divider">— أو —</div>
+    <button class="btn-secondary" onclick="showAdminLogin()">دخول كمشرف 🛡️</button>
+  </div>
+</div>
+
+<header>
+  <div class="header-inner">
+    <div style="display:flex;align-items:center;gap:10px">
+      <img src="ucl-icon-192.png" style="width:38px;height:38px;border-radius:9px" alt="دوري الأبطال">
+      <div class="logo-text"><h1>دوري أبطال أوروبا</h1><p>موسم 2026-27 · توقعاتي</p></div>
+    </div>
+    <div class="header-actions">
+      <span id="adminBadge" style="display:none">🛡️ مشرف</span>
+      <span id="userBadge" style="display:none"></span>
+      <button class="logout-btn" onclick="doLogout()">خروج</button>
+    </div>
+  </div>
+  <div class="tabs">
+    <button class="tab-btn active" onclick="showTab('matches',this)">📅 المباريات</button>
+    <button class="tab-btn" onclick="showTab('leaderboard',this)">🏅 الترتيب</button>
+    <button class="tab-btn" onclick="showTab('rules',this)">📋 القواعد</button>
+    <button class="tab-btn" id="adminTabBtn" style="display:none" onclick="showTab('admin',this)">🛡️ الإدارة</button>
+  </div>
+</header>
+
+<main>
+  <div id="tab-matches" class="tab-pane active">
+    <div class="md-selector" id="mdSelector"></div>
+    <div id="matchesList"></div>
+  </div>
+
+  <div id="tab-leaderboard" class="tab-pane">
+    <div class="lb-list" id="lbList"></div>
+  </div>
+
+  <div id="tab-rules" class="tab-pane">
+    <div class="rules-box">
+      <h3>⚽ نظام احتساب النقاط</h3>
+      <div class="rule-item"><div class="rule-pts" style="background:rgba(0,230,118,.2);color:var(--green)">3</div><div><div class="rule-desc">توقع دقيق للنتيجة الكاملة</div><div class="rule-sub">مثال: توقعت 2-1 وانتهت 2-1 ✅</div></div></div>
+      <div class="rule-item"><div class="rule-pts" style="background:rgba(0,212,255,.2);color:var(--cyan)">1</div><div><div class="rule-desc">توقع صحيح للفائز أو التعادل بنتيجة مختلفة</div><div class="rule-sub">مثال: توقعت 2-0 وانتهت 3-1 ✅</div></div></div>
+      <div class="rule-item" style="border:none"><div class="rule-pts" style="background:rgba(255,59,92,.12);color:var(--red)">0</div><div><div class="rule-desc">توقع خاطئ</div><div class="rule-sub">توقعت فوز فريق وفاز الآخر ❌</div></div></div>
+    </div>
+    <div class="rules-box">
+      <h3>🏆 عن المسابقة</h3>
+      <div class="rule-item"><div class="rule-desc" style="font-weight:400;font-size:.8rem;line-height:1.7">36 نادياً، 8 جولات لكل نادٍ (144 مباراة) حتى 27 يناير 2027. الجولة الأولى انتهت فعلاً — التوقعات تبدأ من الجولة الثانية (13 أكتوبر 2026). يُغلق التوقع قبل ساعة من انطلاق كل مباراة.</div></div>
+    </div>
+  </div>
+
+  <div id="tab-admin" class="tab-pane">
+    <div class="admin-panel">
+      <h3>🛡️ لوحة إدارة دوري الأبطال</h3>
+      <div class="admin-sec">
+        <div class="admin-sec-title">📊 إحصائيات</div>
+        <div id="adminStats" style="font-size:.82rem;color:var(--muted)"></div>
+      </div>
+      <div class="admin-sec">
+        <div class="admin-sec-title">⚽ إدخال النتائج — الجولة المختارة أعلاه</div>
+        <div id="adminMatches"></div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<div id="toast"></div>
+
+<script>
+// ════════════════════════════════════════════
+// دوري أبطال أوروبا 2026-27 — نظام التوقعات
+// يستخدم نفس قاعدة بيانات Firebase ونفس المشاركين المسجّلين بتطبيق فانتزي العزبة
+// ════════════════════════════════════════════
+const FB_URL = 'https://world-cup-2026-d3091-default-rtdb.europe-west1.firebasedatabase.app';
+
+async function fbGet(path){
+  try{
+    const controller = new AbortController();
+    const timer = setTimeout(()=>controller.abort(), 4000);
+    const r = await fetch(`${FB_URL}/${path}.json`, {signal:controller.signal});
+    clearTimeout(timer);
+    return r.ok ? await r.json() : null;
+  }catch(e){ return null; }
+}
+async function fbPatch(path, val){
+  try{ await fetch(`${FB_URL}/${path}.json`, {method:'PATCH', headers:{'Content-Type':'application/json'}, body:JSON.stringify(val)}); return true; }
+  catch(e){ return false; }
+}
+async function fbPut(path, val){
+  try{ await fetch(`${FB_URL}/${path}.json`, {method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify(val)}); return true; }
+  catch(e){ return false; }
+}
+
+// ── بيانات المباريات: 144 مباراة رسمية عبر 8 جولات (مصدر: UEFA.com) ──
+// الجولة الأولى (8-10 سبتمبر 2026) انتهت فعلياً — نتائجها الحقيقية مُضمّنة (resH/resA)
+const MATCHES = [
+  {id:'ucl_m1',md:1,home:'أ.إي.ك أثينا',away:'لاسك لينز',ko:'2026-09-08T19:00:00Z',resH:1,resA:0},
+  {id:'ucl_m2',md:1,home:'كلوب بروج',away:'أستون فيلا',ko:'2026-09-08T19:00:00Z',resH:2,resA:3},
+  {id:'ucl_m3',md:1,home:'بوروسيا دورتموند',away:'فياريال',ko:'2026-09-08T19:00:00Z',resH:3,resA:2},
+  {id:'ucl_m4',md:1,home:'بورتو',away:'مانشستر سيتي',ko:'2026-09-08T19:00:00Z',resH:0,resA:2},
+  {id:'ucl_m5',md:1,home:'ليل',away:'ريال بيتيس',ko:'2026-09-08T19:00:00Z',resH:2,resA:3},
+  {id:'ucl_m6',md:1,home:'ريال مدريد',away:'إنتر ميلان',ko:'2026-09-08T19:00:00Z',resH:2,resA:1},
+  {id:'ucl_m7',md:1,home:'برشلونة',away:'فينورد',ko:'2026-09-09T19:00:00Z',resH:5,resA:1},
+  {id:'ucl_m8',md:1,home:'شتوتغارت',away:'فايكينغ',ko:'2026-09-09T19:00:00Z',resH:3,resA:1},
+  {id:'ucl_m9',md:1,home:'ليفربول',away:'أتلتيكو مدريد',ko:'2026-09-09T19:00:00Z',resH:2,resA:1},
+  {id:'ucl_m10',md:1,home:'باريس سان جيرمان',away:'سلوفان براتيسلافا',ko:'2026-09-09T19:00:00Z',resH:6,resA:1},
+  {id:'ucl_m11',md:1,home:'سبورتينغ لشبونة',away:'غلطة سراي',ko:'2026-09-09T19:00:00Z',resH:3,resA:1},
+  {id:'ucl_m12',md:1,home:'نابولي',away:'أرسنال',ko:'2026-09-09T19:00:00Z',resH:0,resA:1},
+  {id:'ucl_m13',md:1,home:'فنربخشة',away:'روما',ko:'2026-09-10T19:00:00Z',resH:1,resA:1},
+  {id:'ucl_m14',md:1,home:'بي إس في آيندهوفن',away:'شاختار دونيتسك',ko:'2026-09-10T19:00:00Z',resH:1,resA:1},
+  {id:'ucl_m15',md:1,home:'كومو',away:'لايبزيغ',ko:'2026-09-10T19:00:00Z',resH:4,resA:1},
+  {id:'ucl_m16',md:1,home:'بايرن ميونخ',away:'بودو غليمت',ko:'2026-09-10T19:00:00Z',resH:5,resA:0},
+  {id:'ucl_m17',md:1,home:'مانشستر يونايتد',away:'سابح',ko:'2026-09-10T19:00:00Z',resH:4,resA:0},
+  {id:'ucl_m18',md:1,home:'سلافيا براغ',away:'لانس',ko:'2026-09-10T19:00:00Z',resH:2,resA:3},
+  {id:'ucl_m19',md:2,home:'لانس',away:'سبورتينغ لشبونة',ko:'2026-10-13T16:45:00Z'},
+  {id:'ucl_m20',md:2,home:'سابح',away:'سلافيا براغ',ko:'2026-10-13T16:45:00Z'},
+  {id:'ucl_m21',md:2,home:'أرسنال',away:'ليل',ko:'2026-10-13T19:00:00Z'},
+  {id:'ucl_m22',md:2,home:'أتلتيكو مدريد',away:'مانشستر يونايتد',ko:'2026-10-13T19:00:00Z'},
+  {id:'ucl_m23',md:2,home:'إنتر ميلان',away:'كلوب بروج',ko:'2026-10-13T19:00:00Z'},
+  {id:'ucl_m24',md:2,home:'غلطة سراي',away:'برشلونة',ko:'2026-10-13T19:00:00Z'},
+  {id:'ucl_m25',md:2,home:'لايبزيغ',away:'بي إس في آيندهوفن',ko:'2026-10-13T19:00:00Z'},
+  {id:'ucl_m26',md:2,home:'فايكينغ',away:'بايرن ميونخ',ko:'2026-10-13T19:00:00Z'},
+  {id:'ucl_m27',md:2,home:'فياريال',away:'نابولي',ko:'2026-10-13T19:00:00Z'},
+  {id:'ucl_m28',md:2,home:'فينورد',away:'كومو',ko:'2026-10-14T16:45:00Z'},
+  {id:'ucl_m29',md:2,home:'لاسك لينز',away:'ليفربول',ko:'2026-10-14T16:45:00Z'},
+  {id:'ucl_m30',md:2,home:'روما',away:'ريال مدريد',ko:'2026-10-14T19:00:00Z'},
+  {id:'ucl_m31',md:2,home:'أستون فيلا',away:'فنربخشة',ko:'2026-10-14T19:00:00Z'},
+  {id:'ucl_m32',md:2,home:'شاختار دونيتسك',away:'أ.إي.ك أثينا',ko:'2026-10-14T19:00:00Z'},
+  {id:'ucl_m33',md:2,home:'بودو غليمت',away:'بوروسيا دورتموند',ko:'2026-10-14T19:00:00Z'},
+  {id:'ucl_m34',md:2,home:'مانشستر سيتي',away:'باريس سان جيرمان',ko:'2026-10-14T19:00:00Z'},
+  {id:'ucl_m35',md:2,home:'ريال بيتيس',away:'بورتو',ko:'2026-10-14T19:00:00Z'},
+  {id:'ucl_m36',md:2,home:'سلوفان براتيسلافا',away:'شتوتغارت',ko:'2026-10-14T19:00:00Z'},
+  {id:'ucl_m37',md:3,home:'فنربخشة',away:'سلافيا براغ',ko:'2026-10-20T16:45:00Z'},
+  {id:'ucl_m38',md:3,home:'سابح',away:'بوروسيا دورتموند',ko:'2026-10-20T16:45:00Z'},
+  {id:'ucl_m39',md:3,home:'روما',away:'سلوفان براتيسلافا',ko:'2026-10-20T19:00:00Z'},
+  {id:'ucl_m40',md:3,home:'بورتو',away:'بي إس في آيندهوفن',ko:'2026-10-20T19:00:00Z'},
+  {id:'ucl_m41',md:3,home:'ليفربول',away:'فياريال',ko:'2026-10-20T19:00:00Z'},
+  {id:'ucl_m42',md:3,home:'مانشستر سيتي',away:'أ.إي.ك أثينا',ko:'2026-10-20T19:00:00Z'},
+  {id:'ucl_m43',md:3,home:'باريس سان جيرمان',away:'برشلونة',ko:'2026-10-20T19:00:00Z'},
+  {id:'ucl_m44',md:3,home:'نابولي',away:'بودو غليمت',ko:'2026-10-20T19:00:00Z'},
+  {id:'ucl_m45',md:3,home:'شتوتغارت',away:'أتلتيكو مدريد',ko:'2026-10-20T19:00:00Z'},
+  {id:'ucl_m46',md:3,home:'كومو',away:'مانشستر يونايتد',ko:'2026-10-21T16:45:00Z'},
+  {id:'ucl_m47',md:3,home:'ليل',away:'غلطة سراي',ko:'2026-10-21T16:45:00Z'},
+  {id:'ucl_m48',md:3,home:'أستون فيلا',away:'فايكينغ',ko:'2026-10-21T19:00:00Z'},
+  {id:'ucl_m49',md:3,home:'كلوب بروج',away:'لانس',ko:'2026-10-21T19:00:00Z'},
+  {id:'ucl_m50',md:3,home:'بايرن ميونخ',away:'أرسنال',ko:'2026-10-21T19:00:00Z'},
+  {id:'ucl_m51',md:3,home:'إنتر ميلان',away:'شاختار دونيتسك',ko:'2026-10-21T19:00:00Z'},
+  {id:'ucl_m52',md:3,home:'ريال مدريد',away:'لايبزيغ',ko:'2026-10-21T19:00:00Z'},
+  {id:'ucl_m53',md:3,home:'ريال بيتيس',away:'فينورد',ko:'2026-10-21T19:00:00Z'},
+  {id:'ucl_m54',md:3,home:'سبورتينغ لشبونة',away:'لاسك لينز',ko:'2026-10-21T19:00:00Z'},
+  {id:'ucl_m55',md:4,home:'شاختار دونيتسك',away:'سبورتينغ لشبونة',ko:'2026-11-03T17:45:00Z'},
+  {id:'ucl_m56',md:4,home:'غلطة سراي',away:'شتوتغارت',ko:'2026-11-03T17:45:00Z'},
+  {id:'ucl_m57',md:4,home:'أتلتيكو مدريد',away:'بايرن ميونخ',ko:'2026-11-03T20:00:00Z'},
+  {id:'ucl_m58',md:4,home:'برشلونة',away:'أستون فيلا',ko:'2026-11-03T20:00:00Z'},
+  {id:'ucl_m59',md:4,home:'فينورد',away:'إنتر ميلان',ko:'2026-11-03T20:00:00Z'},
+  {id:'ucl_m60',md:4,home:'بودو غليمت',away:'ليل',ko:'2026-11-03T20:00:00Z'},
+  {id:'ucl_m61',md:4,home:'لاسك لينز',away:'سلوفان براتيسلافا',ko:'2026-11-03T20:00:00Z'},
+  {id:'ucl_m62',md:4,home:'مانشستر يونايتد',away:'روما',ko:'2026-11-03T20:00:00Z'},
+  {id:'ucl_m63',md:4,home:'فياريال',away:'باريس سان جيرمان',ko:'2026-11-03T20:00:00Z'},
+  {id:'ucl_m64',md:4,home:'أ.إي.ك أثينا',away:'ريال مدريد',ko:'2026-11-04T17:45:00Z'},
+  {id:'ucl_m65',md:4,home:'فنربخشة',away:'ليفربول',ko:'2026-11-04T17:45:00Z'},
+  {id:'ucl_m66',md:4,home:'بوروسيا دورتموند',away:'ريال بيتيس',ko:'2026-11-04T20:00:00Z'},
+  {id:'ucl_m67',md:4,home:'بورتو',away:'نابولي',ko:'2026-11-04T20:00:00Z'},
+  {id:'ucl_m68',md:4,home:'بي إس في آيندهوفن',away:'كلوب بروج',ko:'2026-11-04T20:00:00Z'},
+  {id:'ucl_m69',md:4,home:'لايبزيغ',away:'مانشستر سيتي',ko:'2026-11-04T20:00:00Z'},
+  {id:'ucl_m70',md:4,home:'لانس',away:'كومو',ko:'2026-11-04T20:00:00Z'},
+  {id:'ucl_m71',md:4,home:'سلافيا براغ',away:'أرسنال',ko:'2026-11-04T20:00:00Z'},
+  {id:'ucl_m72',md:4,home:'فايكينغ',away:'سابح',ko:'2026-11-04T20:00:00Z'},
+  {id:'ucl_m73',md:5,home:'بودو غليمت',away:'لاسك لينز',ko:'2026-11-24T17:45:00Z'},
+  {id:'ucl_m74',md:5,home:'غلطة سراي',away:'أستون فيلا',ko:'2026-11-24T17:45:00Z'},
+  {id:'ucl_m75',md:5,home:'أرسنال',away:'بوروسيا دورتموند',ko:'2026-11-24T20:00:00Z'},
+  {id:'ucl_m76',md:5,home:'كومو',away:'أ.إي.ك أثينا',ko:'2026-11-24T20:00:00Z'},
+  {id:'ucl_m77',md:5,home:'فينورد',away:'بورتو',ko:'2026-11-24T20:00:00Z'},
+  {id:'ucl_m78',md:5,home:'مانشستر سيتي',away:'نابولي',ko:'2026-11-24T20:00:00Z'},
+  {id:'ucl_m79',md:5,home:'لايبزيغ',away:'لانس',ko:'2026-11-24T20:00:00Z'},
+  {id:'ucl_m80',md:5,home:'ريال مدريد',away:'بي إس في آيندهوفن',ko:'2026-11-24T20:00:00Z'},
+  {id:'ucl_m81',md:5,home:'سلوفان براتيسلافا',away:'ريال بيتيس',ko:'2026-11-24T20:00:00Z'},
+  {id:'ucl_m82',md:5,home:'سابح',away:'برشلونة',ko:'2026-11-25T17:45:00Z'},
+  {id:'ucl_m83',md:5,home:'سلافيا براغ',away:'فياريال',ko:'2026-11-25T17:45:00Z'},
+  {id:'ucl_m84',md:5,home:'أتلتيكو مدريد',away:'فايكينغ',ko:'2026-11-25T20:00:00Z'},
+  {id:'ucl_m85',md:5,home:'كلوب بروج',away:'ليفربول',ko:'2026-11-25T20:00:00Z'},
+  {id:'ucl_m86',md:5,home:'إنتر ميلان',away:'شتوتغارت',ko:'2026-11-25T20:00:00Z'},
+  {id:'ucl_m87',md:5,home:'شاختار دونيتسك',away:'فنربخشة',ko:'2026-11-25T20:00:00Z'},
+  {id:'ucl_m88',md:5,home:'ليل',away:'بايرن ميونخ',ko:'2026-11-25T20:00:00Z'},
+  {id:'ucl_m89',md:5,home:'باريس سان جيرمان',away:'روما',ko:'2026-11-25T20:00:00Z'},
+  {id:'ucl_m90',md:5,home:'سبورتينغ لشبونة',away:'مانشستر يونايتد',ko:'2026-11-25T20:00:00Z'},
+  {id:'ucl_m91',md:6,home:'فايكينغ',away:'فينورد',ko:'2026-12-08T17:45:00Z'},
+  {id:'ucl_m92',md:6,home:'فياريال',away:'سابح',ko:'2026-12-08T17:45:00Z'},
+  {id:'ucl_m93',md:6,home:'أ.إي.ك أثينا',away:'غلطة سراي',ko:'2026-12-08T20:00:00Z'},
+  {id:'ucl_m94',md:6,home:'روما',away:'سبورتينغ لشبونة',ko:'2026-12-08T20:00:00Z'},
+  {id:'ucl_m95',md:6,home:'أستون فيلا',away:'باريس سان جيرمان',ko:'2026-12-08T20:00:00Z'},
+  {id:'ucl_m96',md:6,home:'برشلونة',away:'مانشستر سيتي',ko:'2026-12-08T20:00:00Z'},
+  {id:'ucl_m97',md:6,home:'بايرن ميونخ',away:'سلافيا براغ',ko:'2026-12-08T20:00:00Z'},
+  {id:'ucl_m98',md:6,home:'مانشستر يونايتد',away:'لايبزيغ',ko:'2026-12-08T20:00:00Z'},
+  {id:'ucl_m99',md:6,home:'نابولي',away:'كلوب بروج',ko:'2026-12-08T20:00:00Z'},
+  {id:'ucl_m100',md:6,home:'ريال بيتيس',away:'كومو',ko:'2026-12-09T17:45:00Z'},
+  {id:'ucl_m101',md:6,home:'سلوفان براتيسلافا',away:'شاختار دونيتسك',ko:'2026-12-09T17:45:00Z'},
+  {id:'ucl_m102',md:6,home:'أرسنال',away:'ريال مدريد',ko:'2026-12-09T20:00:00Z'},
+  {id:'ucl_m103',md:6,home:'بوروسيا دورتموند',away:'إنتر ميلان',ko:'2026-12-09T20:00:00Z'},
+  {id:'ucl_m104',md:6,home:'لاسك لينز',away:'فنربخشة',ko:'2026-12-09T20:00:00Z'},
+  {id:'ucl_m105',md:6,home:'ليفربول',away:'بورتو',ko:'2026-12-09T20:00:00Z'},
+  {id:'ucl_m106',md:6,home:'بي إس في آيندهوفن',away:'أتلتيكو مدريد',ko:'2026-12-09T20:00:00Z'},
+  {id:'ucl_m107',md:6,home:'لانس',away:'بودو غليمت',ko:'2026-12-09T20:00:00Z'},
+  {id:'ucl_m108',md:6,home:'شتوتغارت',away:'ليل',ko:'2026-12-09T20:00:00Z'},
+  {id:'ucl_m109',md:7,home:'بودو غليمت',away:'أتلتيكو مدريد',ko:'2027-01-19T17:45:00Z'},
+  {id:'ucl_m110',md:7,home:'غلطة سراي',away:'فينورد',ko:'2027-01-19T17:45:00Z'},
+  {id:'ucl_m111',md:7,home:'أ.إي.ك أثينا',away:'روما',ko:'2027-01-19T20:00:00Z'},
+  {id:'ucl_m112',md:7,home:'أستون فيلا',away:'بوروسيا دورتموند',ko:'2027-01-19T20:00:00Z'},
+  {id:'ucl_m113',md:7,home:'إنتر ميلان',away:'ليفربول',ko:'2027-01-19T20:00:00Z'},
+  {id:'ucl_m114',md:7,home:'بورتو',away:'سلافيا براغ',ko:'2027-01-19T20:00:00Z'},
+  {id:'ucl_m115',md:7,home:'ليل',away:'سلوفان براتيسلافا',ko:'2027-01-19T20:00:00Z'},
+  {id:'ucl_m116',md:7,home:'ريال مدريد',away:'لاسك لينز',ko:'2027-01-19T20:00:00Z'},
+  {id:'ucl_m117',md:7,home:'شتوتغارت',away:'كلوب بروج',ko:'2027-01-19T20:00:00Z'},
+  {id:'ucl_m118',md:7,home:'فنربخشة',away:'فياريال',ko:'2027-01-20T17:45:00Z'},
+  {id:'ucl_m119',md:7,home:'سابح',away:'نابولي',ko:'2027-01-20T17:45:00Z'},
+  {id:'ucl_m120',md:7,home:'كومو',away:'باريس سان جيرمان',ko:'2027-01-20T20:00:00Z'},
+  {id:'ucl_m121',md:7,home:'مانشستر يونايتد',away:'بايرن ميونخ',ko:'2027-01-20T20:00:00Z'},
+  {id:'ucl_m122',md:7,home:'لايبزيغ',away:'شاختار دونيتسك',ko:'2027-01-20T20:00:00Z'},
+  {id:'ucl_m123',md:7,home:'لانس',away:'مانشستر سيتي',ko:'2027-01-20T20:00:00Z'},
+  {id:'ucl_m124',md:7,home:'ريال بيتيس',away:'أرسنال',ko:'2027-01-20T20:00:00Z'},
+  {id:'ucl_m125',md:7,home:'سبورتينغ لشبونة',away:'برشلونة',ko:'2027-01-20T20:00:00Z'},
+  {id:'ucl_m126',md:7,home:'فايكينغ',away:'بي إس في آيندهوفن',ko:'2027-01-20T20:00:00Z'},
+  {id:'ucl_m127',md:8,home:'أرسنال',away:'سابح',ko:'2027-01-27T20:00:00Z'},
+  {id:'ucl_m128',md:8,home:'روما',away:'ليل',ko:'2027-01-27T20:00:00Z'},
+  {id:'ucl_m129',md:8,home:'أتلتيكو مدريد',away:'فنربخشة',ko:'2027-01-27T20:00:00Z'},
+  {id:'ucl_m130',md:8,home:'بوروسيا دورتموند',away:'أ.إي.ك أثينا',ko:'2027-01-27T20:00:00Z'},
+  {id:'ucl_m131',md:8,home:'كلوب بروج',away:'بودو غليمت',ko:'2027-01-27T20:00:00Z'},
+  {id:'ucl_m132',md:8,home:'بايرن ميونخ',away:'ريال بيتيس',ko:'2027-01-27T20:00:00Z'},
+  {id:'ucl_m133',md:8,home:'برشلونة',away:'كومو',ko:'2027-01-27T20:00:00Z'},
+  {id:'ucl_m134',md:8,home:'شاختار دونيتسك',away:'ريال مدريد',ko:'2027-01-27T20:00:00Z'},
+  {id:'ucl_m135',md:8,home:'فينورد',away:'لايبزيغ',ko:'2027-01-27T20:00:00Z'},
+  {id:'ucl_m136',md:8,home:'لاسك لينز',away:'بورتو',ko:'2027-01-27T20:00:00Z'},
+  {id:'ucl_m137',md:8,home:'ليفربول',away:'لانس',ko:'2027-01-27T20:00:00Z'},
+  {id:'ucl_m138',md:8,home:'مانشستر سيتي',away:'سبورتينغ لشبونة',ko:'2027-01-27T20:00:00Z'},
+  {id:'ucl_m139',md:8,home:'باريس سان جيرمان',away:'غلطة سراي',ko:'2027-01-27T20:00:00Z'},
+  {id:'ucl_m140',md:8,home:'بي إس في آيندهوفن',away:'شتوتغارت',ko:'2027-01-27T20:00:00Z'},
+  {id:'ucl_m141',md:8,home:'سلافيا براغ',away:'أستون فيلا',ko:'2027-01-27T20:00:00Z'},
+  {id:'ucl_m142',md:8,home:'نابولي',away:'فايكينغ',ko:'2027-01-27T20:00:00Z'},
+  {id:'ucl_m143',md:8,home:'فياريال',away:'مانشستر يونايتد',ko:'2027-01-27T20:00:00Z'},
+  {id:'ucl_m144',md:8,home:'سلوفان براتيسلافا',away:'إنتر ميلان',ko:'2027-01-27T20:00:00Z'},
+];
+
+let DB = { users:{}, uclPredictions:{}, uclResults:{} };
+let currentUser = null;
+let currentMD = 2; // أول جولة قابلة للتوقع
+
+function now(){ return new Date(); }
+
+async function loadDatabase(){
+  const [u, p, r] = await Promise.all([fbGet('users'), fbGet('uclPredictions'), fbGet('uclResults')]);
+  DB.users = u || {};
+  DB.uclPredictions = p || {};
+  DB.uclResults = r || {};
+  // نتائج الجولة الأولى الحقيقية — تُحفظ تلقائياً أول مرة (بلا توقعات، للعرض فقط)
+  let needSave = false;
+  MATCHES.forEach(m=>{
+    if(m.resH!=null && !DB.uclResults[m.id]){
+      DB.uclResults[m.id] = {h:m.resH, a:m.resA};
+      needSave = true;
+    }
+  });
+  if(needSave) fbPatch('uclResults', DB.uclResults);
+}
+
+// ════════════════════════════════════════════
+// AUTH — نفس آلية الدخول المستخدمة بتطبيق الفانتزي (توافق كامل)
+// ════════════════════════════════════════════
+function submitLogin(){
+  const first = document.getElementById('loginFirstName').value.trim();
+  const tribe = document.getElementById('loginTribeName').value.trim();
+  if(!first || !tribe){ showToast('أدخل اسمك الأول والعائلة كاملين'); return; }
+  const userId = (first+'_'+tribe).toLowerCase().replace(/\s+/g,'_').replace(/[^\u0600-\u06FFa-z0-9_]/g,'');
+  const isAdmin = (userId.includes('admin') || userId.includes('turki69'));
+  let userObj = DB.users[userId];
+  if(!userObj){
+    userObj = { id:userId, name:`${first} ${tribe}`, isAdmin };
+    DB.users[userId] = userObj;
+    fbPatch(`users/${userId}`, userObj);
+  }
+  localStorage.setItem('ucl_azba_user', userId);
+  currentUser = userObj;
+  loginSuccess();
+}
+
+function showAdminLogin(){
+  document.getElementById('authCard').innerHTML = `
+    <span class="star-icon">🛡️</span>
+    <h2>دخول المشرف</h2>
+    <p>لإدارة نتائج دوري الأبطال</p>
+    <input class="fpl-input" id="adminUser" placeholder="اسم المستخدم">
+    <input class="fpl-input" type="password" id="adminPass" placeholder="كلمة المرور">
+    <button class="btn-primary" onclick="submitAdminLogin()">دخول</button>
+    <button class="btn-secondary" onclick="location.reload()">رجوع</button>
+  `;
+}
+function submitAdminLogin(){
+  const u = document.getElementById('adminUser').value.trim();
+  const p = document.getElementById('adminPass').value.trim();
+  if(u==='turki69' && p==='Abuyassmin69'){
+    const userId='admin_turki69';
+    currentUser = { id:userId, name:'المشرف', isAdmin:true };
+    DB.users[userId] = currentUser;
+    fbPatch(`users/${userId}`, currentUser);
+    localStorage.setItem('ucl_azba_user', userId);
+    loginSuccess();
+  } else { showToast('⚠️ بيانات دخول خاطئة'); }
+}
+
+function checkSession(){
+  const saved = localStorage.getItem('ucl_azba_user');
+  if(saved && DB.users[saved]){ currentUser = DB.users[saved]; loginSuccess(); }
+  else { document.getElementById('authOverlay').style.display='flex'; }
+}
+function doLogout(){ localStorage.removeItem('ucl_azba_user'); location.reload(); }
+
+function loginSuccess(){
+  document.getElementById('authOverlay').style.display='none';
+  document.getElementById('userBadge').textContent = currentUser.name;
+  document.getElementById('userBadge').style.display='inline-block';
+  if(currentUser.isAdmin){
+    document.getElementById('adminBadge').style.display='inline-block';
+    document.getElementById('adminTabBtn').style.display='block';
+  }
+  renderAll();
+}
+
+// ════════════════════════════════════════════
+// SCORING
+// ════════════════════════════════════════════
+function outcome(h,a){ return h>a?'h':a>h?'a':'d'; }
+function pts(pred,res){
+  if(!res||!pred) return null;
+  if(pred.h===res.h && pred.a===res.a) return 3;
+  if(outcome(pred.h,pred.a)===outcome(res.h,res.a)) return 1;
+  return 0;
+}
+function totalPts(userId){
+  const preds = DB.uclPredictions[userId] || {};
+  let s = 0;
+  Object.entries(preds).forEach(([mid,pred])=>{
+    const res = DB.uclResults[mid];
+    if(res){ const v=pts(pred,res); if(v!=null) s+=v; }
+  });
+  return s;
+}
+
+// ════════════════════════════════════════════
+// RENDER
+// ════════════════════════════════════════════
+function renderAll(){
+  renderMdSelector();
+  renderMatches();
+  renderLeaderboard();
+  if(currentUser.isAdmin) renderAdmin();
+}
+
+function renderMdSelector(){
+  const el = document.getElementById('mdSelector');
+  const mds = [1,2,3,4,5,6,7,8];
+  el.innerHTML = mds.map(md=>{
+    const mdMatches = MATCHES.filter(m=>m.md===md);
+    const allDone = mdMatches.every(m=>DB.uclResults[m.id]);
+    const cls = (md===currentMD?'active ':'') + (allDone?'md-done ':'');
+    return `<button class="md-btn ${cls}" onclick="setMD(${md})">جولة ${md}${allDone?' ✓':''}</button>`;
+  }).join('');
+}
+function setMD(md){ currentMD=md; renderMdSelector(); renderMatches(); if(currentUser.isAdmin) renderAdmin(); }
+
+function matchStatus(m){
+  const res = DB.uclResults[m.id];
+  if(res) return 'done';
+  const ko = new Date(m.ko);
+  const lockTime = new Date(ko.getTime() - 3600*1000);
+  if(now() >= lockTime) return 'locked';
+  return 'open';
+}
+function formatDT(iso){
+  const d = new Date(iso);
+  const days=['الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'];
+  const months=['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
+  const hh = d.getUTCHours().toString().padStart(2,'0');
+  const mm = d.getUTCMinutes().toString().padStart(2,'0');
+  return `${days[d.getUTCDay()]} ${d.getUTCDate()} ${months[d.getUTCMonth()]} · ${hh}:${mm} UTC`;
+}
+
+function renderMatches(){
+  const el = document.getElementById('matchesList');
+  const list = MATCHES.filter(m=>m.md===currentMD);
+  el.innerHTML = list.map(m=>buildMatchCard(m)).join('');
+}
+
+function buildMatchCard(m){
+  const status = matchStatus(m);
+  const res = DB.uclResults[m.id];
+  const myPred = DB.uclPredictions[currentUser.id]?.[m.id];
+
+  let badge = status==='open' ? '<span class="badge badge-open">🟢 مفتوح</span>'
+    : status==='locked' ? '<span class="badge badge-locked">🔒 مغلق</span>'
+    : '<span class="badge badge-done">✅ انتهت</span>';
+
+  const scoreHTML = res ? `<div class="score-result">${res.h} - ${res.a}</div>` : `<div class="vs-label">VS</div>`;
+
+  let predHTML = '';
+  if(status==='open'){
+    const ph = myPred?.h ?? 0, pa = myPred?.a ?? 0;
+    predHTML = `<div class="pred-area">
+      <div class="score-inputs">
+        <span style="font-size:.7rem;color:var(--muted)">${m.home}</span>
+        <div class="score-input-wrap"><button onclick="adj('${m.id}','h',-1)">−</button><input class="score-num" type="number" id="h_${m.id}" value="${ph}" min="0" max="15"><button onclick="adj('${m.id}','h',1)">+</button></div>
+        <span style="color:var(--muted);font-weight:900">-</span>
+        <div class="score-input-wrap"><button onclick="adj('${m.id}','a',-1)">−</button><input class="score-num" type="number" id="a_${m.id}" value="${pa}" min="0" max="15"><button onclick="adj('${m.id}','a',1)">+</button></div>
+        <span style="font-size:.7rem;color:var(--muted)">${m.away}</span>
+      </div>
+      <button class="save-pred-btn" onclick="savePred('${m.id}',event)">حفظ التوقع ✓</button>
+    </div>`;
+  } else if(myPred){
+    const v = res ? pts(myPred,res) : null;
+    let ptsBadge = '';
+    if(res){
+      if(v===3) ptsBadge = `<span class="pts-badge pts-3">+3 🎯</span>`;
+      else if(v===1) ptsBadge = `<span class="pts-badge pts-1">+1 ✓</span>`;
+      else ptsBadge = `<span class="pts-badge pts-0">0 ✗</span>`;
+    } else {
+      ptsBadge = `<span class="pts-badge" style="background:rgba(139,155,199,.15);color:var(--muted)">🔒 سري</span>`;
+    }
+    predHTML = `<div class="pred-area"><div class="my-pred-display">
+      <div><div class="pred-mine-label">توقعك</div><div class="pred-mine-score">${m.home} ${myPred.h}-${myPred.a} ${m.away}</div></div>
+      ${ptsBadge}
+    </div></div>`;
+  } else if(status!=='open'){
+    predHTML = `<div class="pred-area"><div style="text-align:center;font-size:.75rem;color:var(--muted)">لم تُدخل توقعاً لهذه المباراة</div></div>`;
+  }
+
+  return `<div class="match-card" id="card-${m.id}">
+    <div class="match-top"><div class="match-time">${formatDT(m.ko)}</div>${badge}</div>
+    <div class="teams-row">
+      <div class="team"><div class="team-name">${m.home}</div></div>
+      <div class="vs-area">${scoreHTML}</div>
+      <div class="team"><div class="team-name">${m.away}</div></div>
+    </div>
+    ${predHTML}
+  </div>`;
+}
+
+function adj(id,side,d){
+  const i = document.getElementById(side+'_'+id);
+  if(!i) return;
+  i.value = Math.max(0, Math.min(15, (+i.value||0)+d));
+}
+
+async function savePred(id, ev){
+  const btn = ev?.target;
+  if(btn){ btn.disabled=true; btn.textContent='جارٍ الحفظ... ⏳'; }
+  const h = Math.max(0, +document.getElementById('h_'+id).value||0);
+  const a = Math.max(0, +document.getElementById('a_'+id).value||0);
+  if(!DB.uclPredictions[currentUser.id]) DB.uclPredictions[currentUser.id]={};
+  DB.uclPredictions[currentUser.id][id] = {h,a};
+  const ok = await fbPatch(`uclPredictions/${currentUser.id}`, DB.uclPredictions[currentUser.id]);
+  const m = MATCHES.find(x=>x.id===id);
+  if(ok) showToast(`✓ تم حفظ توقعك: ${m.home} ${h}-${a} ${m.away}`);
+  else showToast('⚠️ تعذّر الحفظ');
+  renderMatches();
+}
+
+function renderLeaderboard(){
+  const players = Object.values(DB.users).filter(u=>!u.isAdmin)
+    .map(u=>({id:u.id, name:u.name, pts:totalPts(u.id)}))
+    .sort((a,b)=>b.pts-a.pts);
+  const el = document.getElementById('lbList');
+  if(!players.length){ el.innerHTML = '<div class="f-empty">لا يوجد مشاركون بعد</div>'; return; }
+  el.innerHTML = players.map((p,i)=>{
+    const rc = i===0?'r1':i===1?'r2':i===2?'r3':'';
+    const ri = i===0?'🥇':i===1?'🥈':i===2?'🥉':(i+1);
+    const isMe = p.id===currentUser.id;
+    return `<div class="lb-row ${isMe?'me':''}" style="animation-delay:${Math.min(i*30,300)}ms">
+      <div class="lb-rank ${rc}">${ri}</div>
+      <div class="lb-info"><div class="lb-name">${isMe?'⭐ ':''}${p.name}</div></div>
+      <div class="lb-pts">${p.pts}</div>
+    </div>`;
+  }).join('');
+}
+
+// ════════════════════════════════════════════
+// ADMIN
+// ════════════════════════════════════════════
+function renderAdmin(){
+  const total = MATCHES.filter(m=>m.md===currentMD).length;
+  const done = MATCHES.filter(m=>m.md===currentMD && DB.uclResults[m.id]).length;
+  document.getElementById('adminStats').innerHTML = `الجولة ${currentMD}: ${done}/${total} نتيجة مُدخلة · ${Object.keys(DB.users).filter(u=>!DB.users[u].isAdmin).length} مشارك مسجّل`;
+
+  const list = MATCHES.filter(m=>m.md===currentMD);
+  document.getElementById('adminMatches').innerHTML = list.map(m=>{
+    const r = DB.uclResults[m.id];
+    return `<div class="admin-match-item">
+      <div class="admin-match-title">${r?`<span class="result-badge">${r.h}-${r.a}</span>`:''}${m.home} vs ${m.away}</div>
+      <div class="admin-score-row">
+        <input class="admin-inp" type="number" id="ah_${m.id}" value="${r?.h??''}" min="0" placeholder="0">
+        <span style="color:var(--muted)">-</span>
+        <input class="admin-inp" type="number" id="aa_${m.id}" value="${r?.a??''}" min="0" placeholder="0">
+        <button class="btn-admin" onclick="adminSaveResult('${m.id}')">حفظ</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function adminSaveResult(id){
+  const h = parseInt(document.getElementById('ah_'+id).value);
+  const a = parseInt(document.getElementById('aa_'+id).value);
+  if(isNaN(h)||isNaN(a)||h<0||a<0){ showToast('أدخل نتيجة صحيحة'); return; }
+  DB.uclResults[id] = {h,a};
+  await fbPatch('uclResults', {[id]:{h,a}});
+  showToast('✅ تم حفظ النتيجة');
+  renderAdmin(); renderMatches(); renderLeaderboard(); renderMdSelector();
+}
+
+// ════════════════════════════════════════════
+// UI HELPERS
+// ════════════════════════════════════════════
+function showTab(tab, btn){
+  document.querySelectorAll('.tab-pane').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('tab-'+tab).classList.add('active');
+  if(btn) btn.classList.add('active');
+}
+function showToast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), 2800);
+}
+
+window.addEventListener('DOMContentLoaded', async ()=>{
+  await loadDatabase();
+  checkSession();
+  document.getElementById('loadingOverlay').style.display='none';
+});
+</script>
+</body>
+</html>
