@@ -1,0 +1,37 @@
+/* Champions League-inspired Starball background layer */
+body{position:relative;isolation:isolate;}
+body::before{
+  content:'';
+  position:fixed;
+  inset:0;
+  z-index:-1;
+  pointer-events:none;
+  background-image:url('assets/ucl-starball-bg.svg');
+  background-repeat:no-repeat;
+  background-position:center clamp(140px,22vh,260px);
+  background-size:min(112vw,980px) auto;
+  opacity:.075;
+  filter:drop-shadow(0 0 26px rgba(92,126,255,.16));
+}
+
+/* Keep the decorative mark visible through the page while preserving readability */
+main,.footer-credit{position:relative;z-index:1;}
+.match-card,.dash-card,.lb-hero,.podium-card,.lb-row,.admin-section,.info-card,.rule-card{
+  backdrop-filter:saturate(112%);
+}
+
+@media(max-width:760px){
+  body::before{
+    background-position:center 170px;
+    background-size:135vw auto;
+    opacity:.065;
+  }
+}
+
+@media(min-width:1100px){
+  body::before{
+    background-position:center 190px;
+    background-size:900px auto;
+    opacity:.06;
+  }
+}
