@@ -2,7 +2,7 @@
   "name": "توقعاتي — دوري أبطال أوروبا",
   "short_name": "توقعات الأبطال",
   "description": "منصة التوقعات الرسمية لمباريات دوري أبطال أوروبا لموسم 2026-27",
-  "start_url": "./ucl2026.html",
+  "start_url": "./",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait",
@@ -10,7 +10,10 @@
   "theme_color": "#070B18",
   "lang": "ar",
   "dir": "rtl",
-  "categories": ["sports", "entertainment"],
+  "categories": [
+    "sports",
+    "entertainment"
+  ],
   "icons": [
     {
       "src": "ucl-icon-192.png",
