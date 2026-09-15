@@ -8,6 +8,7 @@
 // حتى لا أكسر تسجيل الدخول الحالي — يحتاج قراراً وعملاً منفصلاً لاحقاً.
 // ════════════════════════════════════════════
 const FB_URL = 'https://world-cup-2026-d3091-default-rtdb.europe-west1.firebasedatabase.app';
+const UCL_COMPETITION = { season:'2026/27', name:'UEFA Champions League', identity:'Kick of Light' };
 
 async function fbGet(path){
   try{
@@ -40,30 +41,53 @@ const CLUB_EN = {
   'كومو':'como-1907','لايبزيغ':'rb-leipzig','بايرن ميونخ':'bayern-munich','بودو غليمت':'bodo-glimt',
   'مانشستر يونايتد':'manchester-united','سابح':'kf-sabail','سلافيا براغ':'slavia-prague','لانس':'rc-lens',
 };
-const CLUB_BADGE = {
-  'أ.إي.ك أثينا':['AEK','#FFD500','#000'], 'لاسك لينز':['LSK','#0A0A0A','#fff'],
-  'كلوب بروج':['CLB','#005CA9','#fff'], 'أستون فيلا':['AVL','#670E36','#95BFE5'],
-  'بوروسيا دورتموند':['BVB','#FDE100','#000'], 'فياريال':['VIL','#FFE667','#005187'],
-  'بورتو':['POR','#0B4EA2','#fff'], 'مانشستر سيتي':['MCI','#6CABDD','#fff'],
-  'ليل':['LOS','#C10000','#fff'], 'ريال بيتيس':['BET','#00A650','#fff'],
-  'ريال مدريد':['RMA','#FFFFFF','#00529F'], 'إنتر ميلان':['INT','#010E80','#fff'],
-  'برشلونة':['BAR','#A50044','#004D98'], 'فينورد':['FEY','#E1000F','#fff'],
-  'شتوتغارت':['VFB','#E0001F','#fff'], 'فايكينغ':['VIK','#003399','#fff'],
-  'ليفربول':['LIV','#C8102E','#fff'], 'أتلتيكو مدريد':['ATM','#CB3524','#272E61'],
-  'باريس سان جيرمان':['PSG','#004170','#DA291C'], 'سلوفان براتيسلافا':['SLB','#5DBFEB','#003057'],
-  'سبورتينغ لشبونة':['SCP','#008542','#fff'], 'غلطة سراي':['GAL','#FFB300','#A90432'],
-  'نابولي':['NAP','#12A0D7','#fff'], 'أرسنال':['ARS','#EF0107','#fff'],
-  'فنربخشة':['FB','#FFDD00','#003399'], 'روما':['ROM','#8E1F2F','#F0BC42'],
-  'بي إس في آيندهوفن':['PSV','#ED1C24','#fff'], 'شاختار دونيتسك':['SHK','#FF6600','#000'],
-  'كومو':['COM','#0057A8','#fff'], 'لايبزيغ':['RBL','#DD0741','#fff'],
-  'بايرن ميونخ':['BAY','#DC052D','#0066B2'], 'بودو غليمت':['BOD','#FFD700','#000'],
-  'مانشستر يونايتد':['MUN','#DA020E','#FBE122'], 'سابح':['SAB','#C8102E','#00205B'],
-  'سلافيا براغ':['SLA','#C8102E','#fff'], 'لانس':['LEN','#FFD100','#C8102E'],
+const CLUB_META = {
+  'أ.إي.ك أثينا':{id:'50129',abbr:'AEK',c1:'#FFCC00',c2:'#111111'},
+  'لاسك لينز':{id:'63405',abbr:'LASK',c1:'#111111',c2:'#FFFFFF'},
+  'كلوب بروج':{id:'50043',abbr:'CLB',c1:'#005CA9',c2:'#111111'},
+  'أستون فيلا':{id:'52683',abbr:'AVL',c1:'#670E36',c2:'#95BFE5'},
+  'بوروسيا دورتموند':{id:'52758',abbr:'BVB',c1:'#FDE100',c2:'#111111'},
+  'فياريال':{id:'70691',abbr:'VIL',c1:'#FFE667',c2:'#005187'},
+  'بورتو':{id:'50064',abbr:'FCP',c1:'#00428C',c2:'#FFFFFF'},
+  'مانشستر سيتي':{id:'52919',abbr:'MCI',c1:'#6CABDD',c2:'#FFFFFF'},
+  'ليل':{id:'75797',abbr:'LOSC',c1:'#D71920',c2:'#172B4D'},
+  'ريال بيتيس':{id:'52265',abbr:'BET',c1:'#00954C',c2:'#FFFFFF'},
+  'ريال مدريد':{id:'50051',abbr:'RMA',c1:'#FFFFFF',c2:'#FEBE10'},
+  'إنتر ميلان':{id:'50138',abbr:'INT',c1:'#0057B8',c2:'#111111'},
+  'برشلونة':{id:'50080',abbr:'BAR',c1:'#A50044',c2:'#004D98'},
+  'فينورد':{id:'52749',abbr:'FEY',c1:'#E31B23',c2:'#FFFFFF'},
+  'شتوتغارت':{id:'50107',abbr:'VFB',c1:'#E32219',c2:'#FFFFFF'},
+  'فايكينغ':{id:'52319',abbr:'VIK',c1:'#00205B',c2:'#FFFFFF'},
+  'ليفربول':{id:'7889',abbr:'LIV',c1:'#C8102E',c2:'#00B2A9'},
+  'أتلتيكو مدريد':{id:'50124',abbr:'ATM',c1:'#CB3524',c2:'#272E61'},
+  'باريس سان جيرمان':{id:'52747',abbr:'PSG',c1:'#004170',c2:'#DA291C'},
+  'سلوفان براتيسلافا':{id:'52797',abbr:'SLB',c1:'#5DBFEB',c2:'#FFFFFF'},
+  'سبورتينغ لشبونة':{id:'50149',abbr:'SCP',c1:'#008A3B',c2:'#FFFFFF'},
+  'غلطة سراي':{id:'50067',abbr:'GAL',c1:'#A90432',c2:'#FDB912'},
+  'نابولي':{id:'50136',abbr:'NAP',c1:'#12A0D7',c2:'#FFFFFF'},
+  'أرسنال':{id:'52280',abbr:'ARS',c1:'#EF0107',c2:'#FFFFFF'},
+  'فنربخشة':{id:'52692',abbr:'FB',c1:'#FFED00',c2:'#002D72'},
+  'روما':{id:'50137',abbr:'ROM',c1:'#8E1F2F',c2:'#F0BC42'},
+  'بي إس في آيندهوفن':{id:'50062',abbr:'PSV',c1:'#ED1C24',c2:'#FFFFFF'},
+  'شاختار دونيتسك':{id:'52707',abbr:'SHK',c1:'#F36F21',c2:'#111111'},
+  'كومو':{id:'79946',abbr:'COM',c1:'#1F5FA8',c2:'#FFFFFF'},
+  'لايبزيغ':{id:'2603790',abbr:'RBL',c1:'#DD0741',c2:'#001E69'},
+  'بايرن ميونخ':{id:'50037',abbr:'FCB',c1:'#DC052D',c2:'#0066B2'},
+  'بودو غليمت':{id:'59333',abbr:'BOD',c1:'#FFDD00',c2:'#111111'},
+  'مانشستر يونايتد':{id:'52682',abbr:'MUN',c1:'#DA291C',c2:'#FBE122'},
+  'سابح':{id:'2609356',abbr:'SAB',c1:'#0E3A73',c2:'#FFFFFF'},
+  'سلافيا براغ':{id:'52498',abbr:'SLA',c1:'#D71920',c2:'#FFFFFF'},
+  'لانس':{id:'52277',abbr:'RCL',c1:'#FFD100',c2:'#C8102E'},
 };
+
 function clubBadge(name, size){
-  const b = CLUB_BADGE[name] || ['—','#333','#fff'];
-  const s = size||38;
-  return `<span class="club-crest" style="width:${s}px;height:${s}px;background:${b[1]};color:${b[2]}">${b[0]}</span>`;
+  const m = CLUB_META[name] || {id:null,abbr:'—',c1:'#27304f',c2:'#ffffff'};
+  const s = size || 50;
+  if(!m.id){
+    return `<span class="club-crest crest-fallback" style="width:${s}px;height:${s}px;--team-a:${m.c1};--team-b:${m.c2}">${m.abbr}</span>`;
+  }
+  const src = `https://img.uefa.com/imgml/TP/teams/logos/70x70/${m.id}.png`;
+  return `<span class="club-crest crest-real" style="width:${s}px;height:${s}px;--team-a:${m.c1};--team-b:${m.c2}"><img src="${src}" alt="شعار ${name}" loading="lazy" decoding="async" onerror="this.style.display='none';this.nextElementSibling.style.display='grid'"><span class="crest-fallback-text">${m.abbr}</span></span>`;
 }
 
 const MATCHES = [
@@ -437,7 +461,7 @@ function renderDashboard(){
 
   el.innerHTML = `
     <div class="dash-card">
-      <div class="dash-greet"><i data-lucide="hand" class="icon"></i> مرحباً، ${(currentUser.nickname||currentUser.name).split(' ')[0]}</div>
+      <div class="ucl-eyebrow"><span class="ucl-star">✦</span> UEFA Champions League · 2026/27</div><div class="dash-greet"><i data-lucide="hand" class="icon"></i> مرحباً، ${(currentUser.nickname||currentUser.name).split(' ')[0]}</div>
       <div class="dash-sub">توقعاتك في دوري الأبطال</div>
       <div class="dash-stats">
         <div class="stat-cell"><span class="t-num">${savedCount}</span><span class="t-meta">توقع محفوظ</span></div>
@@ -571,7 +595,8 @@ function buildMatchCard(m){
     predHTML = `<div class="pred-zone"><div class="no-pred-note"><i data-lucide="minus-circle" class="icon-sm"></i> لم تُدخل توقعاً لهذه المباراة</div></div>`;
   }
 
-  return `<div class="match-card status-${status}" id="card-${m.id}">
+  const hm = CLUB_META[m.home] || {}; const am = CLUB_META[m.away] || {};
+  return `<div class="match-card status-${status}" id="card-${m.id}" style="--home-color:${hm.c1||'#3b5cff'};--away-color:${am.c1||'#55dcff'}">
     <div class="match-card-top">
       <div class="match-time-wrap"><i data-lucide="calendar" class="icon-sm"></i><span class="t-meta">${formatDT(m.ko)}</span></div>
       ${badge}
