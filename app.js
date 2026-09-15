@@ -913,3 +913,21 @@ window.addEventListener('DOMContentLoaded', async ()=>{
   setInterval(checkReminders, 5*60*1000);
   setInterval(async ()=>{ await loadDatabase(); renderDashboard(); renderMatches(); renderLeaderboard(); renderMdSelector(); if(currentUser?.isAdmin) renderAdmin(); paintIcons(); }, 60*1000);
 });
+
+
+// Optional opening sound. Add a licensed file at assets/intro.mp3.
+// iOS may block autoplay; if so it plays once on the user's first tap.
+function tryPlayIntroAudio(){
+  const audio = document.getElementById('appIntroAudio');
+  if(!audio || sessionStorage.getItem('ucl_intro_played')==='1') return;
+  audio.volume = 0.32;
+  const p = audio.play();
+  if(p && typeof p.then === 'function'){
+    p.then(()=>sessionStorage.setItem('ucl_intro_played','1')).catch(()=>{});
+  }
+}
+window.addEventListener('load', ()=>setTimeout(tryPlayIntroAudio, 350));
+document.addEventListener('pointerdown', function playIntroOnce(){
+  tryPlayIntroAudio();
+  if(sessionStorage.getItem('ucl_intro_played')==='1') document.removeEventListener('pointerdown', playIntroOnce);
+}, {passive:true});
