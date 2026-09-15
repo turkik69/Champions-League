@@ -1,0 +1,40 @@
+name: Link Starball Background
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/link_starball_css.py'
+      - '.github/workflows/link-starball.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  link-starball:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - name: Link starball stylesheet
+        run: python scripts/link_starball_css.py
+      - name: Verify assets
+        run: |
+          test -f starball.css
+          test -f assets/ucl-starball-bg.svg
+          grep -q 'starball.css' index.html
+      - name: Commit linked stylesheet
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html
+          if git diff --cached --quiet; then
+            echo "No changes"
+          else
+            git commit -m "Enable full-page starball background"
+            git push origin main
+          fi
