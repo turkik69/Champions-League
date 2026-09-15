@@ -16,13 +16,13 @@
   ],
   "icons": [
     {
-      "src": "https://upload.wikimedia.org/wikipedia/en/thumb/f/f5/UEFA_Champions_League.svg/512px-UEFA_Champions_League.svg.png",
+      "src": "assets/app-icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "https://upload.wikimedia.org/wikipedia/en/thumb/f/f5/UEFA_Champions_League.svg/512px-UEFA_Champions_League.svg.png",
+      "src": "assets/app-icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
