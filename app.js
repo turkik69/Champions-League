@@ -882,7 +882,7 @@ function markNotified(key){
 }
 function fireNotification(title, body){
   if('Notification' in window && Notification.permission==='granted'){
-    try{ new Notification(title, {body, icon:'ucl-icon-192.png'}); }catch(e){}
+    try{ new Notification(title, {body, icon:'assets/app-icon-192.png'}); }catch(e){}
   }
 }
 function checkReminders(){
