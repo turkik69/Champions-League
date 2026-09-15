@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000" role="img" aria-label="Starball background">
+  <g fill="none" stroke="white" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="500" cy="500" r="360" stroke-width="10" opacity=".24"/>
+    <circle cx="500" cy="500" r="255" stroke-width="6" opacity=".14"/>
+    <g stroke-width="16" opacity=".82">
+      <path d="M500 112 L560 330 L790 255 L625 415 L835 500 L625 585 L790 745 L560 670 L500 888 L440 670 L210 745 L375 585 L165 500 L375 415 L210 255 L440 330 Z"/>
+    </g>
+    <g stroke-width="8" opacity=".38">
+      <path d="M500 205 L540 360 L705 305 L590 430 L742 500 L590 570 L705 695 L540 640 L500 795 L460 640 L295 695 L410 570 L258 500 L410 430 L295 305 L460 360 Z"/>
+    </g>
+    <g stroke-width="5" opacity=".2">
+      <path d="M500 112 L500 888 M112 500 L888 500 M228 228 L772 772 M772 228 L228 772"/>
+    </g>
+  </g>
+</svg>
