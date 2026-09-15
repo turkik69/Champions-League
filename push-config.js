@@ -9,6 +9,6 @@ window.UCL_PUSH_CONFIG = {
   messagingSenderId: '830204361101',
   appId: '1:830204361101:web:f3a23c0fa41bb809d365c4',
   measurementId: 'G-4Y1R6PW3SL',
-  vapidKey: '',
+  vapidKey: ['BJ0U0e4v5iNhSHtKFRgqRF5MX9','-9hWgV-cS2Drc75c9MCb0--JvP5','LmqU4_JJn6RoIRwalaHnT-T46PE19XUaZM'].join(''),
   publicConfigPath: 'pushPublicConfig'
 };
