@@ -16,19 +16,13 @@
   ],
   "icons": [
     {
-      "src": "ucl-icon-192.png",
-      "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "any"
-    },
-    {
-      "src": "ucl-icon-512.png",
+      "src": "https://upload.wikimedia.org/wikipedia/en/thumb/f/f5/UEFA_Champions_League.svg/512px-UEFA_Champions_League.svg.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "ucl-icon-maskable.png",
+      "src": "https://upload.wikimedia.org/wikipedia/en/thumb/f/f5/UEFA_Champions_League.svg/512px-UEFA_Champions_League.svg.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
