@@ -16,9 +16,28 @@
 <link rel="stylesheet" href="styles.css">
 <link rel="stylesheet" href="starball.css">
 <link rel="stylesheet" href="ucl-identity.css">
-<meta name="app-version" content="3.2-redesigned-icon">
+<meta name="app-version" content="3.3-starball-mark">
 </head>
 <body>
+
+<svg width="0" height="0" style="position:absolute;overflow:hidden" aria-hidden="true" focusable="false">
+  <symbol id="uclStarballMark" viewBox="0 0 100 100">
+    <defs>
+      <filter id="uclGlow" x="-40%" y="-40%" width="180%" height="180%">
+        <feGaussianBlur stdDeviation="2.1" result="blur"/>
+        <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+      </filter>
+    </defs>
+    <g fill="#fff" filter="url(#uclGlow)">
+      <polygon points="50,13 58,36 82,36 63,50 70,74 50,60 30,74 37,50 18,36 42,36"/>
+      <polygon points="19,17 24,30 38,31 27,39 31,53 19,45 7,53 11,39 0,31 14,30" transform="rotate(-22 19 35) scale(.72) translate(8 6)"/>
+      <polygon points="81,17 86,30 100,31 89,39 93,53 81,45 69,53 73,39 62,31 76,30" transform="rotate(22 81 35) scale(.72) translate(30 6)"/>
+      <polygon points="18,57 23,70 37,71 26,79 30,93 18,85 6,93 10,79 -1,71 13,70" transform="rotate(20 18 75) scale(.72) translate(8 22)"/>
+      <polygon points="82,57 87,70 101,71 90,79 94,93 82,85 70,93 74,79 63,71 77,70" transform="rotate(-20 82 75) scale(.72) translate(30 22)"/>
+      <polygon points="50,68 55,81 69,82 58,90 62,100 50,94 38,100 42,90 31,82 45,81" transform="scale(.70) translate(21 23)"/>
+    </g>
+  </symbol>
+</svg>
 
 <div id="loadingOverlay">
   <div class="skel-wrap">
@@ -32,7 +51,7 @@
 
 <div id="authOverlay">
   <div class="auth-card" id="authCard">
-    <div class="auth-logo-wrap ucl-official-mark"><img src="assets/app-icon-512.png" alt="UEFA Champions League"></div>
+    <div class="auth-logo-wrap ucl-official-mark" aria-label="UEFA Champions League"><svg class="ucl-starball-svg" viewBox="0 0 100 100" aria-hidden="true"><use href="#uclStarballMark"></use></svg></div>
     <h2 class="auth-title">توقعاتي</h2>
     <div class="auth-subtitle">دوري أبطال أوروبا</div>
     <div class="auth-season">موسم 2026-27 · تنافس مع مشاركي فانتزي العزبة</div>
@@ -49,7 +68,6 @@
   </div>
 </div>
 
-<!-- PROFILE SETTINGS MODAL -->
 <div id="profileOverlay" class="modal-overlay" onclick="closeProfileSettings(event)">
   <div class="modal-sheet" onclick="event.stopPropagation()">
     <div class="sheet-handle"></div>
@@ -63,20 +81,11 @@
       <label class="field-label">لون ثيمك المفضّل</label>
       <div class="color-row">
         <input type="color" id="colorPicker" value="#22D3EE" oninput="previewThemeColor(this.value)">
-        <div style="flex:1;text-align:right">
-          <div id="colorPreviewName" class="t-card-title" style="color:var(--cyan)">لونك الحالي</div>
-          <div class="t-meta">يتغيّر الثيم فور الاختيار</div>
-        </div>
+        <div style="flex:1;text-align:right"><div id="colorPreviewName" class="t-card-title" style="color:var(--cyan)">لونك الحالي</div><div class="t-meta">يتغيّر الثيم فور الاختيار</div></div>
       </div>
       <div id="colorSwatches" class="swatch-grid"></div>
     </div>
-    <div class="toggle-row">
-      <span class="t-card-title"><i data-lucide="bell" class="icon-sm"></i> تفعيل التذكيرات</span>
-      <label class="switch">
-        <input type="checkbox" id="notifyToggle">
-        <span id="notifyTrack" class="switch-track" onclick="toggleNotifySwitch()"></span>
-      </label>
-    </div>
+    <div class="toggle-row"><span class="t-card-title"><i data-lucide="bell" class="icon-sm"></i> تفعيل التذكيرات</span><label class="switch"><input type="checkbox" id="notifyToggle"><span id="notifyTrack" class="switch-track" onclick="toggleNotifySwitch()"></span></label></div>
     <button class="btn-primary" onclick="saveProfileSettings()"><i data-lucide="check" class="icon"></i> حفظ</button>
     <button class="btn-secondary" onclick="closeProfileSettingsDirect()">إغلاق</button>
   </div>
@@ -85,11 +94,8 @@
 <header>
   <div class="header-inner">
     <div class="brand">
-      <span class="brand-mark ucl-brand-mark"><img src="assets/app-icon-512.png" alt="UEFA Champions League"></span>
-      <div class="brand-text">
-        <h1>دوري أبطال أوروبا</h1>
-        <p id="userBadge">موسم 2026-27</p>
-      </div>
+      <span class="brand-mark ucl-brand-mark" aria-label="UEFA Champions League"><svg class="ucl-starball-svg" viewBox="0 0 100 100" aria-hidden="true"><use href="#uclStarballMark"></use></svg></span>
+      <div class="brand-text"><h1>دوري أبطال أوروبا</h1><p id="userBadge">موسم 2026-27</p></div>
     </div>
     <div class="header-actions">
       <span id="adminBadge"><i data-lucide="shield-check" class="icon-sm"></i> مشرف</span>
@@ -106,52 +112,15 @@
 </header>
 
 <main>
-  <div id="tab-matches" class="tab-pane active">
-    <div id="dashboardWrap"></div>
-    <div class="md-scroll-wrap">
-      <div class="md-scroll-label"><i data-lucide="list" class="icon-sm"></i> اختر الجولة</div>
-      <div class="md-selector" id="mdSelector"></div>
-    </div>
-    <div class="matches-grid" id="matchesList"></div>
-  </div>
-
-  <div id="tab-leaderboard" class="tab-pane">
-    <div id="lbHeroWrap"></div>
-    <div id="podiumWrap"></div>
-    <div class="lb-list" id="lbList"></div>
-  </div>
-
+  <div id="tab-matches" class="tab-pane active"><div id="dashboardWrap"></div><div class="md-scroll-wrap"><div class="md-scroll-label"><i data-lucide="list" class="icon-sm"></i> اختر الجولة</div><div class="md-selector" id="mdSelector"></div></div><div class="matches-grid" id="matchesList"></div></div>
+  <div id="tab-leaderboard" class="tab-pane"><div id="lbHeroWrap"></div><div id="podiumWrap"></div><div class="lb-list" id="lbList"></div></div>
   <div id="tab-rules" class="tab-pane">
     <div class="rule-section-title"><i data-lucide="target" class="icon-sm"></i> كيف تُحسب النقاط؟</div>
-    <div class="rule-grid">
-      <div class="rule-card"><div class="rule-icon-wrap" style="background:rgba(34,197,94,.16);color:var(--green)">3</div><div class="rule-card-title">توقع دقيق</div><div class="rule-card-sub">توقعت النتيجة بالضبط<br>مثال: 2-1 وانتهت 2-1</div></div>
-      <div class="rule-card"><div class="rule-icon-wrap" style="background:rgba(34,211,238,.16);color:var(--cyan)">1</div><div class="rule-card-title">توقع الفائز</div><div class="rule-card-sub">أصبت الفائز أو التعادل<br>بنتيجة مختلفة</div></div>
-      <div class="rule-card"><div class="rule-icon-wrap" style="background:rgba(239,68,68,.12);color:var(--red)">0</div><div class="rule-card-title">توقع خاطئ</div><div class="rule-card-sub">توقعت فوز فريق<br>وفاز الفريق الآخر</div></div>
-    </div>
-    <div class="rule-section-title"><i data-lucide="clock" class="icon-sm"></i> متى يُغلق التوقع؟</div>
-    <div class="info-card"><i data-lucide="timer" class="icon"></i><p>يُفتح التوقع لكل مباراة قبل موعدها بـ24 ساعة، ويُغلق تلقائياً قبل ساعة واحدة من الانطلاق — بعدها لا يمكن التعديل.</p></div>
-    <div class="rule-section-title"><i data-lucide="trophy" class="icon-sm"></i> عن المسابقة</div>
-    <div class="info-card"><i data-lucide="info" class="icon"></i><p>36 نادياً يتنافسون في 8 جولات لكل نادٍ (144 مباراة) حتى 27 يناير 2027. الجولة الأولى انتهت فعلياً، والتوقعات تبدأ من الجولة الثانية.</p></div>
+    <div class="rule-grid"><div class="rule-card"><div class="rule-icon-wrap" style="background:rgba(34,197,94,.16);color:var(--green)">3</div><div class="rule-card-title">توقع دقيق</div><div class="rule-card-sub">توقعت النتيجة بالضبط<br>مثال: 2-1 وانتهت 2-1</div></div><div class="rule-card"><div class="rule-icon-wrap" style="background:rgba(34,211,238,.16);color:var(--cyan)">1</div><div class="rule-card-title">توقع الفائز</div><div class="rule-card-sub">أصبت الفائز أو التعادل<br>بنتيجة مختلفة</div></div><div class="rule-card"><div class="rule-icon-wrap" style="background:rgba(239,68,68,.12);color:var(--red)">0</div><div class="rule-card-title">توقع خاطئ</div><div class="rule-card-sub">توقعت فوز فريق<br>وفاز الفريق الآخر</div></div></div>
+    <div class="rule-section-title"><i data-lucide="clock" class="icon-sm"></i> متى يُغلق التوقع؟</div><div class="info-card"><i data-lucide="timer" class="icon"></i><p>يُفتح التوقع لكل مباراة قبل موعدها بـ24 ساعة، ويُغلق تلقائياً قبل ساعة واحدة من الانطلاق — بعدها لا يمكن التعديل.</p></div>
+    <div class="rule-section-title"><i data-lucide="trophy" class="icon-sm"></i> عن المسابقة</div><div class="info-card"><i data-lucide="info" class="icon"></i><p>36 نادياً يتنافسون في 8 جولات لكل نادٍ (144 مباراة) حتى 27 يناير 2027. الجولة الأولى انتهت فعلياً، والتوقعات تبدأ من الجولة الثانية.</p></div>
   </div>
-
-  <div id="tab-admin" class="tab-pane">
-    <div class="admin-hero"><i data-lucide="layout-dashboard" class="icon-lg"></i><span class="t-section" style="font-size:1.15rem">لوحة تحكم الإدارة</span></div>
-    <div class="admin-stats-grid" id="adminStatsGrid"></div>
-    <div class="admin-section">
-      <div class="admin-section-head"><i data-lucide="goal" class="icon"></i> إدخال النتائج — الجولة المختارة</div>
-      <div class="admin-hint"><i data-lucide="info" class="icon-sm" style="vertical-align:-2px"></i> المحاولة التلقائية تملأ الخانات فقط من مصدر خارجي — راجع الرقم واضغط "حفظ" لتأكيده يدوياً.</div>
-      <button class="btn-admin" style="width:100%;justify-content:center;margin-bottom:12px" onclick="autoFetchResults()" id="autoFetchBtn"><i data-lucide="refresh-cw" class="icon-sm"></i> محاولة جلب النتائج تلقائياً</button>
-      <div id="adminMatches"></div>
-    </div>
-    <div class="admin-section">
-      <div class="admin-section-head"><i data-lucide="megaphone" class="icon"></i> رسالة/إشعار للمشاركين</div>
-      <input class="fpl-input" id="msgTitleInp" placeholder="عنوان الرسالة (اختياري)" style="margin-bottom:8px">
-      <textarea class="fpl-input" id="msgBodyInp" placeholder="اكتب رسالتك هنا..." style="min-height:76px;resize:vertical;margin-bottom:8px"></textarea>
-      <button class="btn-admin" style="width:100%;justify-content:center" onclick="sendAdminMessage()"><i data-lucide="send" class="icon-sm"></i> إرسال للجميع الآن</button>
-      <div id="adminMessagesList" style="margin-top:12px"></div>
-    </div>
-    <div class="admin-section"><div class="admin-section-head"><i data-lucide="users" class="icon"></i> إدارة المشاركين</div><div id="adminUsers"></div></div>
-  </div>
+  <div id="tab-admin" class="tab-pane"><div class="admin-hero"><i data-lucide="layout-dashboard" class="icon-lg"></i><span class="t-section" style="font-size:1.15rem">لوحة تحكم الإدارة</span></div><div class="admin-stats-grid" id="adminStatsGrid"></div><div class="admin-section"><div class="admin-section-head"><i data-lucide="goal" class="icon"></i> إدخال النتائج — الجولة المختارة</div><div class="admin-hint"><i data-lucide="info" class="icon-sm" style="vertical-align:-2px"></i> المحاولة التلقائية تملأ الخانات فقط من مصدر خارجي — راجع الرقم واضغط "حفظ" لتأكيده يدوياً.</div><button class="btn-admin" style="width:100%;justify-content:center;margin-bottom:12px" onclick="autoFetchResults()" id="autoFetchBtn"><i data-lucide="refresh-cw" class="icon-sm"></i> محاولة جلب النتائج تلقائياً</button><div id="adminMatches"></div></div><div class="admin-section"><div class="admin-section-head"><i data-lucide="megaphone" class="icon"></i> رسالة/إشعار للمشاركين</div><input class="fpl-input" id="msgTitleInp" placeholder="عنوان الرسالة (اختياري)" style="margin-bottom:8px"><textarea class="fpl-input" id="msgBodyInp" placeholder="اكتب رسالتك هنا..." style="min-height:76px;resize:vertical;margin-bottom:8px"></textarea><button class="btn-admin" style="width:100%;justify-content:center" onclick="sendAdminMessage()"><i data-lucide="send" class="icon-sm"></i> إرسال للجميع الآن</button><div id="adminMessagesList" style="margin-top:12px"></div></div><div class="admin-section"><div class="admin-section-head"><i data-lucide="users" class="icon"></i> إدارة المشاركين</div><div id="adminUsers"></div></div></div>
 </main>
 
 <div class="footer-credit">بيانات النتائج التلقائية عبر <a href="https://sportscore.com/" rel="dofollow">SportScore</a><br><span class="footer-note">مشروع توقعات مستقل وغير تابع للاتحاد الأوروبي لكرة القدم UEFA.</span></div>
