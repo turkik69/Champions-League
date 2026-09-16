@@ -6,7 +6,7 @@ const SCHEDULE_URL = `${APP_URL}match-schedule.json`;
 const MAX_DEVICES_PER_RUN = 50;
 const NEWS_PRE_MINUTES = 6 * 60;
 const NEWS_POST_MINUTES = 3 * 60;
-const NEWS_MAX_AGE_HOURS = 72;
+const NEWS_MAX_AGE_HOURS = 168;
 const NEWS_RETRY_MINUTES = 30;
 
 function json(data, status = 200) {
@@ -420,23 +420,64 @@ function uniqueRecentNews(items, now = Date.now()) {
 }
 
 async function getAutomaticRoundNews(kind) {
-  const generalQuery = kind === "pre"
-    ? '"دوري أبطال أوروبا" الجولة القادمة when:3d'
-    : '"دوري أبطال أوروبا" نتائج الجولة when:3d';
-  const starsQuery = '"دوري أبطال أوروبا" نجوم هدافين إصابة غياب when:3d';
+  const generalQueries = kind === "pre"
+    ? [
+        'دوري أبطال أوروبا',
+        'UEFA Champions League',
+        'دوري أبطال أوروبا الجولة القادمة',
+        'Champions League preview',
+      ]
+    : [
+        'دوري أبطال أوروبا نتائج',
+        'UEFA Champions League results',
+        'دوري أبطال أوروبا الجولة',
+        'Champions League highlights',
+      ];
+
+  const starQueries = [
+    'دوري أبطال أوروبا نجوم هدافين إصابات غيابات',
+    'UEFA Champions League stars injuries top scorers',
+    'دوري أبطال أوروبا لاعب الجولة',
+    'Champions League player of the match',
+  ];
+
+  const fetchMany = async (queries) => {
+    const batches = await Promise.all(
+      queries.map(q => fetchGoogleNews(q).catch(() => []))
+    );
+    return batches.flat();
+  };
 
   const [general, stars] = await Promise.all([
-    fetchGoogleNews(generalQuery).catch(() => []),
-    fetchGoogleNews(starsQuery).catch(() => []),
+    fetchMany(generalQueries),
+    fetchMany(starQueries),
   ]);
 
   const generalRecent = uniqueRecentNews(general);
   const starsRecent = uniqueRecentNews(stars);
   const selected = [];
-  if (generalRecent[0]) selected.push(generalRecent[0]);
-  if (generalRecent[1]) selected.push(generalRecent[1]);
-  if (starsRecent[0] && !selected.some(x => x.title === starsRecent[0].title)) selected.push(starsRecent[0]);
-  return uniqueRecentNews(selected).slice(0, 3);
+
+  for (const item of generalRecent.slice(0, 4)) {
+    if (!selected.some(x => x.title === item.title)) selected.push(item);
+    if (selected.length >= 2) break;
+  }
+
+  for (const item of starsRecent.slice(0, 4)) {
+    if (!selected.some(x => x.title === item.title)) selected.push(item);
+    if (selected.length >= 3) break;
+  }
+
+  if (!selected.length) {
+    const fallback = [...general, ...stars]
+      .filter(x => x && x.title)
+      .sort((a, b) => (b.publishedAt || 0) - (a.publishedAt || 0));
+    for (const item of fallback) {
+      if (!selected.some(x => x.title === item.title)) selected.push(item);
+      if (selected.length >= 3) break;
+    }
+  }
+
+  return selected.slice(0, 3);
 }
 
 function roundWindows(matches) {
