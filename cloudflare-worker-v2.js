@@ -6,7 +6,7 @@ const SCHEDULE_URL = `${APP_URL}match-schedule.json`;
 const MAX_DEVICES_PER_RUN = 50;
 const NEWS_PRE_MINUTES = 6 * 60;
 const NEWS_POST_MINUTES = 3 * 60;
-const NEWS_MAX_AGE_HOURS = 168;
+const NEWS_MAX_AGE_HOURS = 72;
 const NEWS_RETRY_MINUTES = 30;
 
 function json(data, status = 200) {
@@ -629,24 +629,68 @@ function newsRelevanceScore(item, kind) {
   return score;
 }
 
-async function getAutomaticRoundNewsV4(kind) {
+function normalizeNewsTitle(title = "") {
+  return String(title)
+    .replace(/^فيديو\s*[|:\-–—]?\s*/i, "")
+    .replace(/^شاهد\s*[|:\-–—]?\s*/i, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function hasWrongStage(title = "", context = null) {
+  const low = String(title).toLowerCase();
+  const md = Number(context?.matchday || 0);
+  // League phase rounds are MD1–MD8. Reject knockout-stage recycled clips/articles.
+  if (md >= 1 && md <= 8) {
+    return /\bqf\b|quarter[- ]?final|ربع النهائي|ربع نهائي|\bsf\b|semi[- ]?final|نصف النهائي|نصف نهائي|round of 16|دور الـ?16|دور 16|2nd leg|second leg|الإياب|اياب/.test(low);
+  }
+  return false;
+}
+
+function isStrictlyFresh(item, maxHours = 72) {
+  if (!item?.publishedAt) return false;
+  const age = Date.now() - Number(item.publishedAt);
+  return age >= -6 * 60 * 60_000 && age <= maxHours * 60 * 60_000;
+}
+
+function isUsefulRoundHeadline(item, kind, context = null) {
+  if (!item?.title) return false;
+  const title = normalizeNewsTitle(item.title);
+  const low = title.toLowerCase();
+  if (!title || title.length < 12) return false;
+  if (!isStrictlyFresh(item, NEWS_MAX_AGE_HOURS)) return false;
+  if (hasWrongStage(title, context)) return false;
+
+  if (/ticket|tickets|price|prices|how to watch|where to watch|live stream|جدول الترتيب|ترتيب دوري|تذاكر|أسعار التذاكر|اسعار التذاكر|موعد بيع|البث المباشر|القنوات الناقلة/.test(low)) return false;
+
+  const competition = /champions league|دوري أبطال أوروبا|دوري الابطال|دوري الأبطال|uefa/.test(low);
+  if (!competition) return false;
+
+  if (kind === 'post') {
+    return /result|highlight|recap|win|wins|goal|goals|scor|player of the match|نتيج|ملخص|فوز|انتصار|هدف|أهداف|اهداف|هداف|نجم|تألق|لاعب المباراة/.test(low);
+  }
+  return /preview|team news|injur|lineup|squad|غياب|إصاب|اصاب|تشكيل|استعداد|جاهزية|قبل الجولة|قبل المباراة|أخبار الجولة|اخبار الجولة/.test(low);
+}
+
+async function getAutomaticRoundNewsV4(kind, context = null) {
   const google = await getAutomaticRoundNews(kind).catch(() => []);
 
+  const roundHint = context?.matchday ? ` الجولة ${context.matchday}` : "";
   const arabicQueries = kind === "pre"
     ? [
-        "دوري أبطال أوروبا أخبار الجولة القادمة",
-        "دوري أبطال أوروبا الغيابات الإصابات التشكيل",
-        "دوري أبطال أوروبا أبرز النجوم قبل الجولة",
+        `دوري أبطال أوروبا${roundHint} أخبار الجولة القادمة`,
+        `دوري أبطال أوروبا${roundHint} الغيابات الإصابات التشكيل`,
+        `دوري أبطال أوروبا${roundHint} أبرز النجوم قبل الجولة`,
       ]
     : [
-        "دوري أبطال أوروبا نتائج الجولة",
-        "دوري أبطال أوروبا ملخص الجولة أبرز النجوم",
-        "دوري أبطال أوروبا الهدافين لاعب الجولة",
+        `دوري أبطال أوروبا${roundHint} نتائج الجولة`,
+        `دوري أبطال أوروبا${roundHint} ملخص الجولة أبرز النجوم`,
+        `دوري أبطال أوروبا${roundHint} الهدافين لاعب الجولة`,
       ];
 
   const englishQueries = kind === "pre"
-    ? ["UEFA Champions League preview", "Champions League team news injuries"]
-    : ["UEFA Champions League results highlights", "Champions League player of the match top scorers"];
+    ? ["UEFA Champions League league phase preview", "Champions League team news injuries league phase"]
+    : ["UEFA Champions League league phase results highlights", "Champions League player of the match top scorers league phase"];
 
   const [arabicBing, englishBing, uefa] = await Promise.all([
     Promise.all(arabicQueries.map(q => fetchBingNews(q, "ar").catch(() => []))),
@@ -654,43 +698,34 @@ async function getAutomaticRoundNewsV4(kind) {
     fetchUefaNews().catch(() => []),
   ]);
 
-  const pool = [
-    ...google,
-    ...arabicBing.flat(),
-    ...uefa,
-    ...englishBing.flat(),
-  ];
-
+  const pool = [...google, ...arabicBing.flat(), ...uefa, ...englishBing.flat()];
   const seen = new Set();
   const unique = [];
+
   for (const raw of pool) {
     if (!raw?.title) continue;
-    const item = {
-      ...raw,
-      title: cleanHeadline(raw.title),
-      source: /uefa\.com/i.test(raw.link || "") ? "UEFA" : (raw.source || "News"),
-    };
-    if (!isFreshNews(item, kind) || !isRelevantRoundNews(item, kind)) continue;
+    const item = { ...raw, title: normalizeNewsTitle(raw.title) };
+    if (!isUsefulRoundHeadline(item, kind, context)) continue;
     const key = item.title.toLowerCase().replace(/\s+/g, " ").trim();
     if (seen.has(key)) continue;
     seen.add(key);
-    unique.push(item);
+    const inferredSource = /uefa\.com/i.test(item.link || "") ? "UEFA" : (item.source || "News");
+    unique.push({ ...item, source: inferredSource });
   }
 
   unique.sort((a, b) => newsRelevanceScore(b, kind) - newsRelevanceScore(a, kind));
 
+  const arabic = unique.filter(x => isArabicHeadline(x.title));
+  const trusted = unique.filter(x => trustedNewsSource(x) >= 25);
   const picked = [];
   const add = item => {
     if (!item || picked.some(x => x.title === item.title)) return;
     picked.push(item);
   };
 
-  unique.filter(x => x.source === 'UEFA').slice(0, 1).forEach(add);
-  unique.filter(x => isArabicHeadline(x.title)).slice(0, 3).forEach(add);
-  unique.forEach(item => {
-    if (picked.length < 3) add(item);
-  });
-
+  arabic.slice(0, 2).forEach(add);
+  trusted.slice(0, 2).forEach(add);
+  unique.forEach(item => { if (picked.length < 3) add(item); });
   return picked.slice(0, 3);
 }
 
@@ -769,7 +804,7 @@ async function processAutomaticRoundNews(accessToken) {
 
   const item = due[0];
   await firebasePatch(`uclAutoRoundNews/${item.key}`, { lastAttemptAt: now }, accessToken);
-  const news = await getAutomaticRoundNewsV4(item.event.kind);
+  const news = await getAutomaticRoundNewsV4(item.event.kind, { matchday: item.round.md });
   if (!news.length) return { action: "auto-round-news-no-headlines", key: item.key };
 
   const text = buildRoundNewsText(item.round.md, item.event.kind, news);
@@ -845,8 +880,15 @@ export default {
     if (url.searchParams.get("newsTest") === "1") {
       try {
         const kind = url.searchParams.get("kind") === "post" ? "post" : "pre";
-        const headlines = await getAutomaticRoundNewsV4(kind);
-        return json({ ok: true, newsTest: true, kind, headlineCount: headlines.length, headlines });
+        const schedule = await fetchSchedule();
+        const rounds = roundWindows(schedule.matches);
+        const now = Date.now();
+        const current = rounds.find(r => r.first <= now && now <= r.last + 24 * 60 * 60_000)
+          || rounds.find(r => r.first > now)
+          || rounds[rounds.length - 1];
+        const context = { matchday: current?.md || 0 };
+        const headlines = await getAutomaticRoundNewsV4(kind, context);
+        return json({ ok: true, newsTest: true, kind, matchday: context.matchday, headlineCount: headlines.length, headlines });
       } catch (error) {
         return json({ ok: false, newsTest: true, error: error?.message || String(error) }, 500);
       }
@@ -862,7 +904,7 @@ export default {
 
     return json({
       ok: true,
-      service: "UCL Push Notifications v6",
+      service: "UCL Push Notifications v7",
       project: PROJECT_ID,
       status: "online",
       schedule: SCHEDULE_URL,
