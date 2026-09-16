@@ -1,0 +1,40 @@
+name: Improve round news context filtering
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/news-quality-v7.yml'
+      - 'scripts/patch_news_context_v7.py'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Apply context-aware news patch
+        run: python scripts/patch_news_context_v7.py
+
+      - name: Validate worker JavaScript
+        run: node --check cloudflare-worker-v2.js
+
+      - name: Commit worker update
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add cloudflare-worker-v2.js
+          if git diff --cached --quiet; then
+            echo "No changes"
+          else
+            git commit -m "Filter round news by freshness and competition stage"
+            git push origin main
+          fi
