@@ -6,6 +6,7 @@ on:
     paths:
       - '.github/workflows/auto-round-news-v3.yml'
       - 'scripts/patch_auto_round_news.py'
+      - 'scripts/fix_round_news_source.py'
   workflow_dispatch:
 
 permissions:
@@ -24,6 +25,9 @@ jobs:
       - name: Apply automatic round news patch
         run: python scripts/patch_auto_round_news.py
 
+      - name: Broaden round news sources
+        run: python scripts/fix_round_news_source.py
+
       - name: Validate worker JavaScript
         run: node --check cloudflare-worker-v2.js
 
@@ -35,6 +39,6 @@ jobs:
           if git diff --cached --quiet; then
             echo "No changes"
           else
-            git commit -m "Add automatic round and star news notifications"
+            git commit -m "Broaden automatic Champions League news retrieval"
             git push origin main
           fi
