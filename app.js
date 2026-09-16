@@ -496,7 +496,7 @@ function matchStatus(m){
   if(res) return 'done';
   const ko = new Date(m.ko);
   const openTime = new Date(ko.getTime() - 24*3600*1000);
-  const lockTime = new Date(ko.getTime() - 3600*1000);
+  const lockTime = new Date(ko.getTime() - 30*60*1000);
   if(now() >= lockTime) return 'locked';
   if(now() < openTime) return 'soon';
   return 'open';
@@ -553,7 +553,7 @@ function buildMatchCard(m){
 
   let cdHTML = '';
   if(status==='open'){
-    const lockTime = new Date(new Date(m.ko).getTime() - 3600*1000);
+    const lockTime = new Date(new Date(m.ko).getTime() - 30*60*1000);
     const cd = countdownText(lockTime);
     if(cd) cdHTML = `<div class="countdown-txt"><i data-lucide="timer" class="icon-sm"></i> ${cd}</div>`;
   }
@@ -892,7 +892,7 @@ function checkReminders(){
     if(DB.uclResults[m.id]) return;
     const ko = new Date(m.ko);
     const openTime = new Date(ko.getTime() - 24*3600*1000);
-    const lockTime = new Date(ko.getTime() - 3600*1000);
+    const lockTime = new Date(ko.getTime() - 30*60*1000);
     if(t>=openTime && t < new Date(openTime.getTime()+10*60000)){
       const key = `open_${m.id}`;
       if(!alreadyNotified(key)){ fireNotification('فُتح التوقع الآن', `${m.home} ضد ${m.away} — لديك 24 ساعة للتوقع`); markNotified(key); }
