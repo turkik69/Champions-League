@@ -572,24 +572,60 @@ function isArabicHeadline(title = "") {
 
 function trustedNewsSource(item) {
   const haystack = `${item?.link || ""} ${item?.source || ""}`.toLowerCase();
-  if (haystack.includes('uefa.com') || haystack.includes('uefa')) return 40;
-  if (/bbc|reuters|apnews|espn|skysports|theathletic|nbcsports|goal\.com/.test(haystack)) return 25;
+  if (haystack.includes('uefa.com') || haystack.includes('uefa')) return 50;
+  if (/reuters|apnews|bbc|espn|skysports|theathletic|nbcsports|goal\.com|bein|kooora|yallakora/.test(haystack)) return 25;
   return 5;
 }
 
+function cleanHeadline(title = "") {
+  return String(title)
+    .replace(/^\s*["'“”]+|["'“”]+\s*$/g, "")
+    .replace(/^فيديو\s*[:|\-–—]*\s*/i, "")
+    .replace(/^شاهد\s*[:|\-–—]*\s*/i, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function isFreshNews(item, kind) {
+  if (!item?.publishedAt) return item?.source === 'UEFA';
+  const age = Date.now() - Number(item.publishedAt);
+  if (age < -6 * 60 * 60_000) return false;
+  const maxAge = (kind === 'post' ? 96 : 120) * 60 * 60_000;
+  return age <= maxAge;
+}
+
+function isRelevantRoundNews(item, kind) {
+  const title = cleanHeadline(item?.title || "");
+  const low = title.toLowerCase();
+  if (!title) return false;
+
+  const obviousNoise = /تذاكر|أسعار التذاكر|شراء التذاكر|جدول ترتيب|ترتيب الدوري|موعد القرعة|القنوات الناقلة|بث مباشر|كيفية المشاهدة|ticket price|tickets?\b|standings|table after|how to watch|live stream/i;
+  if (obviousNoise.test(low)) return false;
+
+  const ucl = /champions league|uefa|دوري أبطال أوروبا|دوري الابطال|دوري الأبطال/i.test(low);
+  const postSignal = /نتيج|ملخص|فوز|خسار|تعادل|هدف|هداف|نجم|تألق|لاعب الجولة|رجل المباراة|result|highlight|recap|win|goal|scor|player of the match/i.test(low);
+  const preSignal = /غياب|إصاب|تشكيل|استعداد|قبل المباراة|قبل الجولة|مواجهة|قائمة|preview|team news|injur|lineup|squad/i.test(low);
+
+  return ucl || (kind === 'post' ? postSignal : preSignal);
+}
+
 function newsRelevanceScore(item, kind) {
-  const title = String(item?.title || "");
+  const title = cleanHeadline(item?.title || "");
   const low = title.toLowerCase();
   let score = 0;
-  if (isArabicHeadline(title)) score += 60;
+
+  if (isArabicHeadline(title)) score += 70;
   score += trustedNewsSource(item);
+  if (/champions league|uefa|دوري أبطال أوروبا|دوري الابطال|دوري الأبطال/.test(low)) score += 25;
 
-  if (/champions league|دوري أبطال أوروبا|دوري الابطال|uefa/.test(low)) score += 25;
-  if (kind === 'post' && /result|highlight|recap|win|goal|scor|نتيج|ملخص|فوز|هدف|هداف|نجم/.test(low)) score += 15;
-  if (kind === 'pre' && /preview|team news|injur|lineup|غياب|إصاب|اصاب|تشكيل|استعداد|قبل/.test(low)) score += 15;
+  if (kind === 'post' && /نتيج|ملخص|فوز|خسار|تعادل|هدف|هداف|نجم|تألق|لاعب الجولة|رجل المباراة|result|highlight|recap|win|goal|scor|player of the match/.test(low)) score += 30;
+  if (kind === 'pre' && /غياب|إصاب|تشكيل|استعداد|قبل المباراة|قبل الجولة|مواجهة|قائمة|preview|team news|injur|lineup|squad/.test(low)) score += 30;
 
-  const age = item?.publishedAt ? Math.max(0, Date.now() - item.publishedAt) : 0;
-  score += Math.max(0, 20 - Math.floor(age / (12 * 60 * 60_000)));
+  if (item?.publishedAt) {
+    const ageHours = Math.max(0, Date.now() - Number(item.publishedAt)) / 3600000;
+    score += Math.max(0, 30 - Math.floor(ageHours / 4));
+  }
+
   return score;
 }
 
@@ -627,28 +663,30 @@ async function getAutomaticRoundNewsV4(kind) {
 
   const seen = new Set();
   const unique = [];
-  for (const item of pool) {
-    if (!item?.title) continue;
+  for (const raw of pool) {
+    if (!raw?.title) continue;
+    const item = {
+      ...raw,
+      title: cleanHeadline(raw.title),
+      source: /uefa\.com/i.test(raw.link || "") ? "UEFA" : (raw.source || "News"),
+    };
+    if (!isFreshNews(item, kind) || !isRelevantRoundNews(item, kind)) continue;
     const key = item.title.toLowerCase().replace(/\s+/g, " ").trim();
     if (seen.has(key)) continue;
     seen.add(key);
-    const inferredSource = /uefa\.com/i.test(item.link || "") ? "UEFA" : (item.source || "News");
-    unique.push({ ...item, source: inferredSource });
+    unique.push(item);
   }
 
   unique.sort((a, b) => newsRelevanceScore(b, kind) - newsRelevanceScore(a, kind));
 
-  const arabic = unique.filter(x => isArabicHeadline(x.title));
-  const trusted = unique.filter(x => trustedNewsSource(x) >= 25);
   const picked = [];
-
   const add = item => {
     if (!item || picked.some(x => x.title === item.title)) return;
     picked.push(item);
   };
 
-  arabic.slice(0, 2).forEach(add);
-  trusted.slice(0, 2).forEach(add);
+  unique.filter(x => x.source === 'UEFA').slice(0, 1).forEach(add);
+  unique.filter(x => isArabicHeadline(x.title)).slice(0, 3).forEach(add);
   unique.forEach(item => {
     if (picked.length < 3) add(item);
   });
@@ -677,10 +715,11 @@ function buildRoundNewsText(md, kind, items) {
   const prefix = kind === "pre"
     ? `أبرز أخبار الجولة ${md} قبل الانطلاق:`
     : `حصاد وأبرز أخبار الجولة ${md}:`;
-  const body = items.map((item, i) => `${i + 1}) ${item.title}`).join(" • ");
+  const cleaned = items.map(item => cleanHeadline(item.title)).filter(Boolean);
+  const body = cleaned.map((title, i) => `${i + 1}) ${title}`).join(" • ");
   return {
-    title: kind === "pre" ? `📰 قبل الجولة ${md} · دوري الأبطال` : `⭐ حصاد الجولة ${md} · دوري الأبطال`,
-    body: `${prefix} ${body}`.slice(0, 500),
+    title: kind === "pre" ? `📰 أبرز أخبار الجولة ${md}` : `⭐ حصاد الجولة ${md}`,
+    body: `${prefix} ${body}`.slice(0, 420),
   };
 }
 
@@ -823,7 +862,7 @@ export default {
 
     return json({
       ok: true,
-      service: "UCL Push Notifications v5",
+      service: "UCL Push Notifications v6",
       project: PROJECT_ID,
       status: "online",
       schedule: SCHEDULE_URL,
@@ -832,7 +871,7 @@ export default {
         "prediction opening alerts (24h)",
         "prediction reminders (1h)",
         "prediction lock alerts (30m)",
-        "Arabic-first automatic round news + trusted-source ranking",
+        "fresh Arabic-first round news with relevance filters",
         "round news queue",
       ],
       debugUrl: "/?run=1",
