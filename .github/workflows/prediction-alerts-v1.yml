@@ -20,7 +20,7 @@ jobs:
           ref: main
           fetch-depth: 0
 
-      - name: Update prediction lock timing and export schedule
+      - name: Update prediction lock timing, UI text and export schedule
         shell: bash
         run: |
           python - <<'PY'
@@ -42,6 +42,17 @@ jobs:
               raise SystemExit('match card lockTime pattern not found')
           s = s.replace(old2, new2)
           p.write_text(s, encoding='utf-8')
+
+          # Keep the visible rules aligned with the real lock time and bust old app.js caches.
+          h = Path('index.html')
+          html = h.read_text(encoding='utf-8')
+          html = html.replace('ويُغلق تلقائياً قبل ساعة واحدة من الانطلاق — بعدها لا يمكن التعديل.',
+                              'ويُغلق تلقائياً قبل 30 دقيقة من الانطلاق — بعدها لا يمكن التعديل.')
+          html = html.replace('<meta name="app-version" content="3.4-fcm-push">',
+                              '<meta name="app-version" content="3.5-prediction-alerts">')
+          html = html.replace('<script src="app.js"></script>',
+                              '<script src="app.js?v=3.5-prediction-alerts"></script>')
+          h.write_text(html, encoding='utf-8')
 
           # Export the public match schedule for the Cloudflare notification worker.
           pat = re.compile(r"\{id:'([^']+)',md:(\d+),home:'([^']+)',away:'([^']+)',ko:'([^']+)'(?:,[^}]*)?\}")
@@ -79,10 +90,10 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add app.js match-schedule.json
+          git add app.js index.html match-schedule.json
           if git diff --cached --quiet; then
             echo "No changes"
           else
-            git commit -m "Open predictions 24h before kickoff and lock 30m before"
+            git commit -m "Align prediction UI with 30-minute lock timing"
             git push origin main
           fi
