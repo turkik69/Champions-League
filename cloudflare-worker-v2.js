@@ -747,14 +747,11 @@ function roundNewsKey(md, kind) {
 }
 
 function buildRoundNewsText(md, kind, items) {
-  const prefix = kind === "pre"
-    ? `أبرز أخبار الجولة ${md} قبل الانطلاق:`
-    : `حصاد وأبرز أخبار الجولة ${md}:`;
   const cleaned = items.map(item => cleanHeadline(item.title)).filter(Boolean);
-  const body = cleaned.map((title, i) => `${i + 1}) ${title}`).join(" • ");
+  const fullBody = cleaned.join(" • ");
   return {
-    title: kind === "pre" ? `📰 أبرز أخبار الجولة ${md}` : `⭐ حصاد الجولة ${md}`,
-    body: `${prefix} ${body}`.slice(0, 420),
+    title: kind === "pre" ? `أخبار الجولة ${md}` : `حصاد الجولة ${md}`,
+    body: fullBody.slice(0, 500),
   };
 }
 
@@ -929,7 +926,7 @@ export default {
 
     return json({
       ok: true,
-      service: "UCL Push Notifications v8",
+      service: "UCL Push Notifications v9",
       project: PROJECT_ID,
       status: "online",
       schedule: SCHEDULE_URL,
