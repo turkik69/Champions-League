@@ -1,0 +1,88 @@
+name: Apply prediction alert timing
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/prediction-alerts-v1.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Update prediction lock timing and export schedule
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re, json
+
+          p = Path('app.js')
+          s = p.read_text(encoding='utf-8')
+
+          old = "const lockTime = new Date(ko.getTime() - 3600*1000);"
+          new = "const lockTime = new Date(ko.getTime() - 30*60*1000);"
+          if old not in s and new not in s:
+              raise SystemExit('matchStatus lockTime pattern not found')
+          s = s.replace(old, new)
+
+          old2 = "const lockTime = new Date(new Date(m.ko).getTime() - 3600*1000);"
+          new2 = "const lockTime = new Date(new Date(m.ko).getTime() - 30*60*1000);"
+          if old2 not in s and new2 not in s:
+              raise SystemExit('match card lockTime pattern not found')
+          s = s.replace(old2, new2)
+          p.write_text(s, encoding='utf-8')
+
+          # Export the public match schedule for the Cloudflare notification worker.
+          pat = re.compile(r"\{id:'([^']+)',md:(\d+),home:'([^']+)',away:'([^']+)',ko:'([^']+)'(?:,[^}]*)?\}")
+          matches = []
+          for m in pat.finditer(s):
+              matches.append({
+                  'id': m.group(1),
+                  'md': int(m.group(2)),
+                  'home': m.group(3),
+                  'away': m.group(4),
+                  'ko': m.group(5),
+              })
+          if len(matches) < 100:
+              raise SystemExit(f'Expected full schedule, found only {len(matches)} matches')
+
+          Path('match-schedule.json').write_text(
+              json.dumps({
+                  'competition': 'UEFA Champions League',
+                  'season': '2026/27',
+                  'timezone': 'Asia/Muscat',
+                  'predictionOpenMinutesBeforeKickoff': 1440,
+                  'reminderMinutesBeforeKickoff': 60,
+                  'predictionLockMinutesBeforeKickoff': 30,
+                  'matches': matches,
+              }, ensure_ascii=False, indent=2) + '\n',
+              encoding='utf-8'
+          )
+          print(f'Exported {len(matches)} matches')
+          PY
+
+      - name: Validate JavaScript
+        run: node --check app.js
+
+      - name: Commit changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app.js match-schedule.json
+          if git diff --cached --quiet; then
+            echo "No changes"
+          else
+            git commit -m "Open predictions 24h before kickoff and lock 30m before"
+            git push origin main
+          fi
