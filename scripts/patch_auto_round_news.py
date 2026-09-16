@@ -230,5 +230,30 @@ if 'automatic round news + star headlines' not in s:
         raise SystemExit('features anchor not found')
     s = s.replace(old_feature, new_feature, 1)
 
+fetch_anchor = '''    if (url.searchParams.get("run") === "1") {
+      try {
+        return json({ ok: true, debug: true, results: await processAll(env) });
+      } catch (error) {
+        return json({ ok: false, debug: true, error: error?.message || String(error) }, 500);
+      }
+    }
+'''
+fetch_block = '''    if (url.searchParams.get("newsTest") === "1") {
+      try {
+        const kind = url.searchParams.get("kind") === "post" ? "post" : "pre";
+        const headlines = await getAutomaticRoundNews(kind);
+        return json({ ok: true, newsTest: true, kind, headlineCount: headlines.length, headlines });
+      } catch (error) {
+        return json({ ok: false, newsTest: true, error: error?.message || String(error) }, 500);
+      }
+    }
+
+''' + fetch_anchor
+if 'url.searchParams.get("newsTest")' not in s:
+    if fetch_anchor not in s:
+        raise SystemExit('fetch route anchor not found')
+    s = s.replace(fetch_anchor, fetch_block, 1)
+
 s = s.replace('service: "UCL Push Notifications v2"', 'service: "UCL Push Notifications v3"')
+s = s.replace('service: "UCL Push Notifications v3"', 'service: "UCL Push Notifications v3"')
 p.write_text(s, encoding='utf-8')
