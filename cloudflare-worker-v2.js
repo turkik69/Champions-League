@@ -874,6 +874,22 @@ async function processAll(env) {
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
+    if (url.searchParams.get("testPush") === "1") {
+      try {
+        const accessToken = await getAccessToken(env);
+        const result = await broadcast(
+          "🔔 إشعار تجريبي",
+          "تم تشغيل الإشعارات بنجاح. هذا اختبار مباشر من نظام إشعارات دوري أبطال أوروبا.",
+          `manual-test-${Date.now()}`,
+          accessToken,
+          { type: "manual-test" }
+        );
+        return json({ ok: true, testPush: true, sent: true, ...result });
+      } catch (error) {
+        return json({ ok: false, testPush: true, error: error?.message || String(error) }, 500);
+      }
+    }
+
     if (url.searchParams.get("newsTest") === "1") {
       try {
         const kind = url.searchParams.get("kind") === "post" ? "post" : "pre";
@@ -926,7 +942,7 @@ export default {
 
     return json({
       ok: true,
-      service: "UCL Push Notifications v9",
+      service: "UCL Push Notifications v10",
       project: PROJECT_ID,
       status: "online",
       schedule: SCHEDULE_URL,
@@ -937,6 +953,7 @@ export default {
         "prediction lock alerts (30m)",
         "fresh Arabic-first round news with relevance filters",
         "round news queue",
+        "temporary manual test push endpoint",
       ],
       debugUrl: "/?run=1",
       time: new Date().toISOString(),
