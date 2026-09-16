@@ -875,6 +875,25 @@ export default {
   async fetch(request, env) {
     const url = new URL(request.url);
     if (url.searchParams.get("testPush") === "1") {
+      const suppliedKey = url.searchParams.get("key") || "";
+      const expectedKey = env.TEST_PUSH_KEY || "";
+
+      if (!expectedKey) {
+        return json({
+          ok: false,
+          testPush: true,
+          error: "TEST_PUSH_KEY secret is not configured in Cloudflare.",
+        }, 503);
+      }
+
+      if (!suppliedKey || suppliedKey !== expectedKey) {
+        return json({
+          ok: false,
+          testPush: true,
+          error: "Unauthorized test push request.",
+        }, 401);
+      }
+
       try {
         const accessToken = await getAccessToken(env);
         const result = await broadcast(
@@ -942,7 +961,7 @@ export default {
 
     return json({
       ok: true,
-      service: "UCL Push Notifications v10",
+      service: "UCL Push Notifications v11",
       project: PROJECT_ID,
       status: "online",
       schedule: SCHEDULE_URL,
@@ -953,7 +972,7 @@ export default {
         "prediction lock alerts (30m)",
         "fresh Arabic-first round news with relevance filters",
         "round news queue",
-        "temporary manual test push endpoint",
+        "protected manual test push endpoint",
       ],
       debugUrl: "/?run=1",
       time: new Date().toISOString(),
