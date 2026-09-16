@@ -586,6 +586,16 @@ async function processAll(env) {
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
+    if (url.searchParams.get("newsTest") === "1") {
+      try {
+        const kind = url.searchParams.get("kind") === "post" ? "post" : "pre";
+        const headlines = await getAutomaticRoundNews(kind);
+        return json({ ok: true, newsTest: true, kind, headlineCount: headlines.length, headlines });
+      } catch (error) {
+        return json({ ok: false, newsTest: true, error: error?.message || String(error) }, 500);
+      }
+    }
+
     if (url.searchParams.get("run") === "1") {
       try {
         return json({ ok: true, debug: true, results: await processAll(env) });
