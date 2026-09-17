@@ -157,3 +157,5 @@ s=s.replace('console.error("UCL worker error:"','console.error("UCL + Gulf worke
 
 p.write_text(s,encoding='utf-8')
 print('patched cloudflare-worker-v2.js to v12 with Gulf Cup automation')
+
+# retrigger workflow after workflow file was added
