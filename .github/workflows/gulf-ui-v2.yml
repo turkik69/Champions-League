@@ -1,0 +1,26 @@
+name: Upgrade Gulf Cup UI v2
+on:
+  push:
+    paths:
+      - 'scripts/patch_gulf_ui_v2.py'
+      - '.github/workflows/gulf-ui-v2.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+      - run: python scripts/patch_gulf_ui_v2.py
+      - name: Commit generated Gulf Cup UI
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add gulf.html gulf.css
+          git diff --cached --quiet && exit 0
+          git commit -m "Upgrade Gulf Cup standings leaderboard and news UI"
+          git push
