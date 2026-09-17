@@ -3,6 +3,7 @@ const DATABASE_URL = "https://world-cup-2026-d3091-default-rtdb.europe-west1.fir
 const APP_URL = "https://turkik69.github.io/Champions-League/";
 const APP_ICON = `${APP_URL}assets/app-icon-192.png`;
 const SCHEDULE_URL = `${APP_URL}match-schedule.json`;
+const GULF_SCHEDULE_URL = `${APP_URL}gulf-schedule.json`;
 const MAX_DEVICES_PER_RUN = 50;
 const NEWS_PRE_MINUTES = 6 * 60;
 const NEWS_POST_MINUTES = 3 * 60;
@@ -116,6 +117,7 @@ async function firebasePatch(path, value, token) {
 }
 
 async function sendFCM(deviceToken, title, body, tag, accessToken, data = {}) {
+  const targetUrl = data?.url || APP_URL;
   const response = await fetch(
     `https://fcm.googleapis.com/v1/projects/${PROJECT_ID}/messages:send`,
     {
@@ -132,7 +134,7 @@ async function sendFCM(deviceToken, title, body, tag, accessToken, data = {}) {
             title,
             body,
             tag: String(tag),
-            url: APP_URL,
+            url: targetUrl,
             ...Object.fromEntries(Object.entries(data).map(([k, v]) => [k, String(v)])),
           },
           webpush: {
@@ -142,7 +144,7 @@ async function sendFCM(deviceToken, title, body, tag, accessToken, data = {}) {
               tag: String(tag),
               renotify: true,
             },
-            fcm_options: { link: APP_URL },
+            fcm_options: { link: targetUrl },
           },
         },
       }),
@@ -861,11 +863,140 @@ async function processRoundNewsQueue(accessToken) {
   return { action: "round-news-sent", id, ...result };
 }
 
+
+async function fetchGulfSchedule() {
+  const response = await fetch(`${GULF_SCHEDULE_URL}?v=${Math.floor(Date.now() / 300000)}`, {
+    headers: { "cache-control": "no-cache" },
+  });
+  if (!response.ok) throw new Error(`Gulf schedule fetch failed: ${response.status}`);
+  const schedule = await response.json();
+  if (!Array.isArray(schedule.matches)) throw new Error("Gulf schedule is missing matches array");
+  return schedule;
+}
+
+function gulfStageLabel(group) {
+  const first = group.matches[0] || {};
+  if (first.stage === "semifinal") return "نصف النهائي";
+  if (first.stage === "final") return "النهائي";
+  return `الجولة ${group.md}`;
+}
+
+function buildGulfEvents(group, config) {
+  const ko = new Date(group.ko).getTime();
+  const openMs = (config.predictionOpenMinutesBeforeKickoff || 1440) * 60_000;
+  const reminderMs = (config.reminderMinutesBeforeKickoff || 60) * 60_000;
+  const lockMs = (config.predictionLockMinutesBeforeKickoff || 30) * 60_000;
+  const fixtureText = compactFixtureText(group);
+  const stage = gulfStageLabel(group);
+  return [
+    { type:"open", at:ko-openMs, title:`🏆 خليجي 27 · فُتحت التوقعات`, body:`${stage}: ${fixtureText}. يمكنك التوقع الآن، ويُغلق الباب قبل المباراة بـ30 دقيقة.` },
+    { type:"reminder", at:ko-reminderMs, title:`⏰ خليجي 27 · تذكير بالتوقع`, body:`تبقت ساعة على ${fixtureText}. بقيت 30 دقيقة فقط على إغلاق التوقع.` },
+    { type:"lock", at:ko-lockMs, title:`🔒 خليجي 27 · أُغلق التوقع`, body:`أُغلق التوقع لـ ${fixtureText}. تنطلق المباراة بعد 30 دقيقة.` },
+  ];
+}
+
+function gulfEventKey(group, type) {
+  return `g27_md${group.md}_${group.ko.replace(/[^0-9]/g, "")}_${type}`;
+}
+
+async function processGulfPredictionAlerts(accessToken) {
+  const schedule = await fetchGulfSchedule();
+  const eligible = schedule.matches.filter(m => m.predictable !== false && m.home && m.away);
+  const groups = groupSchedule(eligible);
+  const now = Date.now();
+  let state = (await firebaseGet("gulfCup27PushAlerts", accessToken)) || null;
+
+  if (!state || !state._initialized) {
+    const boot = { _initialized: { at: now, season: schedule.season || "2026" } };
+    for (const group of groups) {
+      for (const event of buildGulfEvents(group, schedule)) {
+        if (event.at <= now) boot[gulfEventKey(group,event.type)] = { done:true, bootstrapped:true, eventAt:event.at, at:now };
+      }
+    }
+    await firebasePut("gulfCup27PushAlerts", boot, accessToken);
+    return { action:"gulf-alerts-initialized" };
+  }
+
+  const due=[];
+  for (const group of groups) {
+    for (const event of buildGulfEvents(group, schedule)) {
+      const key=gulfEventKey(group,event.type);
+      if (state[key]?.done) continue;
+      if (event.at<=now) due.push({group,event,key});
+    }
+  }
+  due.sort((a,b)=>a.event.at-b.event.at);
+  if (!due.length) return { action:"gulf-alerts-idle" };
+  const item=due[0];
+  const maxLateMs=item.event.type==="open"?2*60*60_000:45*60_000;
+  if (now-item.event.at>maxLateMs) {
+    await firebasePut(`gulfCup27PushAlerts/${item.key}`,{done:true,skippedLate:true,eventAt:item.event.at,checkedAt:now},accessToken);
+    return {action:"gulf-alert-skipped-late",key:item.key};
+  }
+  const result=await broadcast(item.event.title,item.event.body,item.key,accessToken,{
+    type:`gulf-prediction-${item.event.type}`,
+    matchday:item.group.md,
+    kickoff:item.group.ko,
+    competition:"Gulf Cup 27",
+    url:`${APP_URL}#gulf27`,
+  });
+  await firebasePut(`gulfCup27PushAlerts/${item.key}`,{done:true,eventType:item.event.type,eventAt:item.event.at,kickoff:item.group.ko,matchday:item.group.md,sentAt:Date.now(),...result},accessToken);
+  return {action:`gulf-prediction-${item.event.type}-sent`,key:item.key,...result};
+}
+
+function isGulfNews(item) {
+  const title=cleanHeadline(item?.title||"");
+  if (!title || title.length<10) return false;
+  if (!isStrictlyFresh(item,NEWS_MAX_AGE_HOURS)) return false;
+  const low=title.toLowerCase();
+  return /خليجي\s*27|كأس الخليج|كاس الخليج|gulf cup|arabian gulf cup|منتخب عمان|منتخب عُمان|المنتخب السعودي|منتخب السعودية|منتخب العراق|منتخب الكويت|منتخب قطر|منتخب البحرين|منتخب الإمارات|منتخب اليمن/.test(low);
+}
+
+async function fetchGulfNewsItems() {
+  const queries=[
+    "خليجي 27 جدة كأس الخليج",
+    "كأس الخليج 27 السعودية عمان العراق الكويت قطر الإمارات البحرين اليمن",
+    "Gulf Cup 27 Jeddah 2026",
+  ];
+  const batches=await Promise.all(queries.map((q,i)=>fetchBingNews(q,i===2?"en":"ar").catch(()=>[])));
+  const seen=new Set(), items=[];
+  for (const raw of batches.flat()) {
+    if (!isGulfNews(raw)) continue;
+    const title=cleanHeadline(raw.title);
+    const key=title.toLowerCase().replace(/\s+/g," ");
+    if (seen.has(key)) continue;
+    seen.add(key);
+    items.push({...raw,title});
+  }
+  items.sort((a,b)=>(b.publishedAt||0)-(a.publishedAt||0));
+  return items.slice(0,8);
+}
+
+async function processGulfNews(accessToken) {
+  const items=await fetchGulfNewsItems();
+  if (!items.length) return {action:"gulf-news-idle",count:0};
+  await firebasePut("gulfCup27News/latest",items,accessToken);
+  const state=(await firebaseGet("gulfCup27NewsState",accessToken))||{};
+  const top=items[0];
+  const fingerprint=base64Url(new TextEncoder().encode(top.title)).slice(0,28);
+  if (state.lastFingerprint===fingerprint) return {action:"gulf-news-refreshed",count:items.length,notification:"unchanged"};
+  const lastSent=Number(state.lastSentAt||0);
+  if (Date.now()-lastSent<3*60*60_000) return {action:"gulf-news-refreshed",count:items.length,notification:"rate-limited"};
+  const result=await broadcast("📰 أخبار خليجي 27",top.title.slice(0,480),`gulf-news-${fingerprint}`,accessToken,{
+    type:"gulf-news",
+    url:`${APP_URL}#gulf27`,
+  });
+  await firebasePut("gulfCup27NewsState",{lastFingerprint:fingerprint,lastSentAt:Date.now(),title:top.title,...result},accessToken);
+  return {action:"gulf-news-sent",count:items.length,...result};
+}
+
 async function processAll(env) {
   const accessToken = await getAccessToken(env);
   const results = [];
   results.push(await processPredictionAlerts(accessToken));
+  results.push(await processGulfPredictionAlerts(accessToken));
   results.push(await processAutomaticRoundNews(accessToken));
+  results.push(await processGulfNews(accessToken));
   results.push(await processRoundNewsQueue(accessToken));
   results.push(await processAnnouncements(accessToken));
   return results;
@@ -961,7 +1092,7 @@ export default {
 
     return json({
       ok: true,
-      service: "UCL Push Notifications v11",
+      service: "UCL + Gulf Cup Push Notifications v12",
       project: PROJECT_ID,
       status: "online",
       schedule: SCHEDULE_URL,
@@ -973,6 +1104,8 @@ export default {
         "fresh Arabic-first round news with relevance filters",
         "round news queue",
         "protected manual test push endpoint",
+        "Gulf Cup 27 prediction alerts",
+        "Gulf Cup 27 automatic news",
       ],
       debugUrl: "/?run=1",
       time: new Date().toISOString(),
@@ -982,8 +1115,8 @@ export default {
   async scheduled(event, env, ctx) {
     ctx.waitUntil(
       processAll(env)
-        .then(result => console.log("UCL worker result:", JSON.stringify(result)))
-        .catch(error => console.error("UCL worker error:", error?.message || String(error)))
+        .then(result => console.log("UCL + Gulf worker result:", JSON.stringify(result)))
+        .catch(error => console.error("UCL + Gulf worker error:", error?.message || String(error)))
     );
   },
 };
