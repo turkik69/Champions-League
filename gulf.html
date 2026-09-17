@@ -8,7 +8,7 @@
 <link rel="apple-touch-icon" href="assets/app-icon-180.png?v=4">
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=Noto+Sans+Arabic:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js" defer></script>
-<link rel="stylesheet" href="gulf.css?v=1">
+<link rel="stylesheet" href="gulf.css?v=2">
 </head>
 <body>
 <div class="gulf-shell">
@@ -34,16 +34,17 @@
     <button class="gulf-tab active" data-tab="matches"><i data-lucide="calendar-days"></i><span>المباريات</span></button>
     <button class="gulf-tab" data-tab="groups"><i data-lucide="table-2"></i><span>المجموعات</span></button>
     <button class="gulf-tab" data-tab="teams"><i data-lucide="shield"></i><span>المنتخبات</span></button>
-    <button class="gulf-tab" data-tab="ranking"><i data-lucide="trophy"></i><span>التوقعات</span></button>
+    <button class="gulf-tab" data-tab="ranking"><i data-lucide="trophy"></i><span>الترتيب</span></button>
+    <button class="gulf-tab" data-tab="news"><i data-lucide="newspaper"></i><span>الأخبار</span></button>
   </nav>
 
   <main>
     <section class="tab-pane active" id="tab-matches">
       <div class="section-head">
-        <div><span class="kicker">المباريات المؤكدة</span><h2>بداية المشوار</h2></div>
+        <div><span class="kicker">الجدول الكامل</span><h2>مباريات خليجي 27</h2></div>
         <div class="live-badge">خليجي 27</div>
       </div>
-      <div class="notice-card"><i data-lucide="info"></i><span>بدأنا بالمواجهات المنشورة رسميًا، وسيتم استكمال جميع مباريات البطولة فور تثبيت الجدول الكامل من المصدر الرسمي.</span></div>
+      <div class="notice-card"><i data-lucide="info"></i><span>الجدول يشمل دور المجموعات ونصف النهائي والنهائي. التوقعات تفتح تلقائيًا قبل كل مباراة بـ24 ساعة وتغلق قبلها بـ30 دقيقة.</span></div>
       <div id="matchesList" class="matches-list"></div>
     </section>
 
@@ -58,16 +59,22 @@
     </section>
 
     <section class="tab-pane" id="tab-ranking">
-      <div class="section-head"><div><span class="kicker">تحدي خليجي 27</span><h2>توقعاتك</h2></div></div>
+      <div class="section-head"><div><span class="kicker">تحدي خليجي 27</span><h2>ترتيب المتسابقين</h2></div></div>
       <div class="stats-row">
         <div class="stat-card"><strong id="myPredictions">0</strong><span>توقعاتي</span></div>
         <div class="stat-card"><strong id="openPredictions">0</strong><span>متاحة الآن</span></div>
         <div class="stat-card"><strong>3</strong><span>نقاط للنتيجة</span></div>
       </div>
+      <div id="rankingList" class="ranking-list"></div>
       <div class="rules-card">
         <h3><i data-lucide="target"></i> نفس نظام دوري الأبطال</h3>
         <p>3 نقاط للنتيجة الدقيقة، ونقطة واحدة لتوقع الفائز أو التعادل. يُفتح التوقع قبل المباراة بـ24 ساعة ويُغلق قبل الانطلاق بـ30 دقيقة.</p>
       </div>
+    </section>
+
+    <section class="tab-pane" id="tab-news">
+      <div class="section-head"><div><span class="kicker">آخر المستجدات</span><h2>أخبار خليجي 27</h2></div><div class="live-badge">تحديث تلقائي</div></div>
+      <div id="newsList" class="news-list"></div>
     </section>
   </main>
 
@@ -82,6 +89,6 @@
 
   <div id="toast"></div>
 </div>
-<script src="gulf.js?v=1"></script>
+<script src="gulf.js?v=2"></script>
 </body>
 </html>
