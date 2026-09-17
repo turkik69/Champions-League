@@ -15,7 +15,7 @@
   <header class="gulf-hero">
     <div class="hero-pattern"></div>
     <div class="hero-top">
-      <button class="back-btn" onclick="location.href='index.html'" aria-label="العودة"><i data-lucide="arrow-right"></i></button>
+      <button class="back-btn" onclick="window.parent && window.parent!==window && window.parent.closeGulfCup ? window.parent.closeGulfCup() : location.href='index.html'" aria-label="العودة"><i data-lucide="arrow-right"></i></button>
       <div class="hero-pill">جدة 2026</div>
       <button class="icon-btn" id="notifyBtn" aria-label="الإشعارات"><i data-lucide="bell"></i></button>
     </div>
@@ -76,7 +76,7 @@
       <div class="login-icon"><i data-lucide="user-round-check"></i></div>
       <h3>سجّل دخولك من الصفحة الرئيسية</h3>
       <p>نستخدم نفس حسابك ونفس اسمك في دوري الأبطال، بدون تسجيل جديد.</p>
-      <button onclick="location.href='index.html'">العودة لتسجيل الدخول</button>
+      <button onclick="window.parent && window.parent!==window && window.parent.closeGulfCup ? window.parent.closeGulfCup() : location.href='index.html'">العودة لتسجيل الدخول</button>
     </div>
   </div>
 
