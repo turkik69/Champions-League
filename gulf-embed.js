@@ -1,11 +1,15 @@
 function openGulfCup(){
   let overlay=document.getElementById('gulfOverlay');
+  const freshSrc='gulf.html?embedded=1&v='+Date.now();
   if(!overlay){
     overlay=document.createElement('div');
     overlay.id='gulfOverlay';
     overlay.className='gulf-overlay';
-    overlay.innerHTML=`<button class="gulf-close-fab" onclick="closeGulfCup()" aria-label="العودة لدوري الأبطال"><i data-lucide="x"></i></button><iframe class="gulf-frame" src="gulf.html?embedded=1&v=3" title="خليجي 27"></iframe>`;
+    overlay.innerHTML=`<button class="gulf-close-fab" onclick="closeGulfCup()" aria-label="العودة لدوري الأبطال"><i data-lucide="x"></i></button><iframe class="gulf-frame" src="${freshSrc}" title="خليجي 27"></iframe>`;
     document.body.appendChild(overlay);
+  }else{
+    const frame=overlay.querySelector('.gulf-frame');
+    if(frame) frame.src=freshSrc;
   }
   document.body.classList.add('gulf-mode');
   overlay.classList.add('open');
