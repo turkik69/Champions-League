@@ -4,7 +4,7 @@ function openGulfCup(){
     overlay=document.createElement('div');
     overlay.id='gulfOverlay';
     overlay.className='gulf-overlay';
-    overlay.innerHTML=`<button class="gulf-close-fab" onclick="closeGulfCup()" aria-label="العودة لدوري الأبطال"><i data-lucide="x"></i></button><iframe class="gulf-frame" src="gulf.html?embedded=1" title="خليجي 27"></iframe>`;
+    overlay.innerHTML=`<button class="gulf-close-fab" onclick="closeGulfCup()" aria-label="العودة لدوري الأبطال"><i data-lucide="x"></i></button><iframe class="gulf-frame" src="gulf.html?embedded=1&v=3" title="خليجي 27"></iframe>`;
     document.body.appendChild(overlay);
   }
   document.body.classList.add('gulf-mode');
