@@ -65,3 +65,96 @@ exports.broadcastAdminAnnouncement = onValueCreated({
     await db.ref().update(updates);
   }
 });
+
+
+/* =========================================================
+   MUEEN — personal notification channel
+   Data namespace is isolated under /mueen/users/{uid}
+   ========================================================= */
+const MUEEN_URL = 'https://turkik69.github.io/mueen/';
+const MUEEN_ICON = MUEEN_URL + 'icon.svg';
+
+exports.mueenPushDispatch = onValueCreated({
+  ref: '/mueen/users/{uid}/pushQueue/{messageId}',
+  region: 'europe-west1'
+}, async (event) => {
+  const uid = String(event.params.uid || '');
+  const messageId = String(event.params.messageId || '');
+  const msg = event.data.val();
+
+  if (!uid || !messageId || !msg || !msg.body) return;
+
+  const db = getDatabase();
+  const tokensSnap = await db.ref('/mueen/users/' + uid + '/pushTokens').once('value');
+  const rows = tokensSnap.val() || {};
+  const entries = Object.entries(rows).filter(([, value]) => value && value.token);
+
+  if (!entries.length) {
+    await event.data.ref.update({
+      status: 'no-devices',
+      processedAt: Date.now()
+    });
+    return;
+  }
+
+  const title = String(msg.title || 'مُعين').slice(0, 120);
+  const body = String(msg.body || '').slice(0, 500);
+  const messaging = getMessaging();
+  const invalidKeys = [];
+  let successCount = 0;
+  let failureCount = 0;
+
+  for (let i = 0; i < entries.length; i += 500) {
+    const batch = entries.slice(i, i + 500);
+    const tokens = batch.map(([, value]) => value.token);
+
+    const response = await messaging.sendEachForMulticast({
+      tokens,
+      notification: {title, body},
+      data: {
+        title,
+        body,
+        messageId,
+        type: String(msg.type || 'reminder'),
+        itemId: String(msg.itemId || ''),
+        url: MUEEN_URL
+      },
+      webpush: {
+        notification: {
+          icon: MUEEN_ICON,
+          badge: MUEEN_ICON,
+          tag: 'mueen-' + messageId,
+          renotify: true
+        },
+        fcmOptions: {link: MUEEN_URL}
+      }
+    });
+
+    successCount += response.successCount;
+    failureCount += response.failureCount;
+
+    response.responses.forEach((result, idx) => {
+      if (!result.success) {
+        const code = result.error && result.error.code;
+        if (
+          code === 'messaging/registration-token-not-registered' ||
+          code === 'messaging/invalid-registration-token'
+        ) {
+          invalidKeys.push(batch[idx][0]);
+        }
+      }
+    });
+  }
+
+  const updates = {};
+  invalidKeys.forEach((key) => {
+    updates['/mueen/users/' + uid + '/pushTokens/' + key] = null;
+  });
+  updates['/mueen/users/' + uid + '/pushQueue/' + messageId + '/status'] =
+    successCount > 0 ? 'sent' : 'failed';
+  updates['/mueen/users/' + uid + '/pushQueue/' + messageId + '/processedAt'] = Date.now();
+  updates['/mueen/users/' + uid + '/pushQueue/' + messageId + '/successCount'] = successCount;
+  updates['/mueen/users/' + uid + '/pushQueue/' + messageId + '/failureCount'] = failureCount;
+
+  await db.ref().update(updates);
+});
