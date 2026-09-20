@@ -1015,6 +1015,7 @@ async function processAll(env) {
   const accessToken = await getAccessToken(env);
   const results = [];
   results.push(await processPredictionAlerts(accessToken));
+  results.push(await processGulfPredictionAlerts(accessToken));
   results.push(await processAutomaticRoundNews(accessToken));
   results.push(await processGulfNews(accessToken));
   results.push(await processRoundNewsQueue(accessToken));
@@ -1112,7 +1113,7 @@ export default {
 
     return json({
       ok: true,
-      service: "UCL + Gulf Cup Push Notifications v13",
+      service: "UCL + Gulf Cup Push Notifications v14",
       project: PROJECT_ID,
       status: "online",
       schedule: SCHEDULE_URL,
@@ -1124,6 +1125,7 @@ export default {
         "fresh Arabic-first round news with relevance filters",
         "round news queue",
         "protected manual test push endpoint",
+        "Gulf Cup 27 prediction alerts",
         "Gulf Cup 27 Oman-team news only",
       ],
       debugUrl: "/?run=1",
