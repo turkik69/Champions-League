@@ -933,6 +933,17 @@ async function processGulfPredictionAlerts(accessToken) {
     await firebasePut(`gulfCup27PushAlerts/${item.key}`,{done:true,skippedLate:true,eventAt:item.event.at,checkedAt:now},accessToken);
     return {action:"gulf-alert-skipped-late",key:item.key};
   }
+  // Idempotency guard: claim the alert BEFORE sending so a later error cannot resend it every minute.
+  await firebasePut(`gulfCup27PushAlerts/${item.key}`,{
+    done:true,
+    claimed:true,
+    eventType:item.event.type,
+    eventAt:item.event.at,
+    kickoff:item.group.ko,
+    matchday:item.group.md,
+    claimedAt:Date.now()
+  },accessToken);
+
   const result=await broadcast(item.event.title,item.event.body,item.key,accessToken,{
     type:`gulf-prediction-${item.event.type}`,
     matchday:item.group.md,
@@ -940,7 +951,14 @@ async function processGulfPredictionAlerts(accessToken) {
     competition:"Gulf Cup 27",
     url:`${APP_URL}#gulf27`,
   });
-  await firebasePut(`gulfCup27PushAlerts/${item.key}`,{done:true,eventType:item.event.type,eventAt:item.event.at,kickoff:item.group.ko,matchday:item.group.md,sentAt:Date.now(),...result},accessToken);
+
+  await firebasePatch(`gulfCup27PushAlerts/${item.key}`,{
+    sentAt:Date.now(),
+    successful:result.successful||0,
+    failed:result.failed||0,
+    totalDevices:result.totalDevices||0
+  },accessToken).catch(()=>{});
+
   return {action:`gulf-prediction-${item.event.type}-sent`,key:item.key,...result};
 }
 
@@ -1002,24 +1020,49 @@ async function processGulfNews(accessToken) {
     return {action:"gulf-news-refreshed",count:items.length,omanCount:omanItems.length,notification:"rate-limited-12h"};
   }
 
+  // Reserve the headline BEFORE sending. This prevents duplicate notifications if any later step fails.
+  const reservedAt=Date.now();
+  await firebasePut("gulfCup27NewsState",{
+    lastFingerprint:fingerprint,
+    lastSentAt:reservedAt,
+    title:top.title,
+    scope:"oman-only",
+    claimed:true
+  },accessToken);
+
   const result=await broadcast("🇴🇲 أخبار منتخب عُمان",top.title.slice(0,480),`gulf-oman-news-${fingerprint}`,accessToken,{
     type:"gulf-oman-news",
     competition:"Gulf Cup 27",
     url:`${APP_URL}#gulf27`,
   });
-  await firebasePut("gulfCup27NewsState",{lastFingerprint:fingerprint,lastSentAt:Date.now(),title:top.title,scope:"oman-only",...result},accessToken);
+
+  await firebasePatch("gulfCup27NewsState",{
+    sentAt:Date.now(),
+    successful:result.successful||0,
+    failed:result.failed||0,
+    totalDevices:result.totalDevices||0
+  },accessToken).catch(()=>{});
+
   return {action:"gulf-oman-news-sent",count:items.length,omanCount:omanItems.length,...result};
+}
+
+async function safeStep(name, fn) {
+  try {
+    return await fn();
+  } catch (error) {
+    return { action:`${name}-error`, error:error?.message || String(error) };
+  }
 }
 
 async function processAll(env) {
   const accessToken = await getAccessToken(env);
   const results = [];
-  results.push(await processPredictionAlerts(accessToken));
-  results.push(await processGulfPredictionAlerts(accessToken));
-  results.push(await processAutomaticRoundNews(accessToken));
-  results.push(await processGulfNews(accessToken));
-  results.push(await processRoundNewsQueue(accessToken));
-  results.push(await processAnnouncements(accessToken));
+  results.push(await safeStep("ucl-prediction-alerts",()=>processPredictionAlerts(accessToken)));
+  results.push(await safeStep("gulf-prediction-alerts",()=>processGulfPredictionAlerts(accessToken)));
+  results.push(await safeStep("ucl-auto-round-news",()=>processAutomaticRoundNews(accessToken)));
+  results.push(await safeStep("gulf-oman-news",()=>processGulfNews(accessToken)));
+  results.push(await safeStep("ucl-round-news-queue",()=>processRoundNewsQueue(accessToken)));
+  results.push(await safeStep("announcements",()=>processAnnouncements(accessToken)));
   return results;
 }
 
@@ -1113,7 +1156,7 @@ export default {
 
     return json({
       ok: true,
-      service: "UCL + Gulf Cup Push Notifications v14",
+      service: "UCL + Gulf Cup Push Notifications v15",
       project: PROJECT_ID,
       status: "online",
       schedule: SCHEDULE_URL,
