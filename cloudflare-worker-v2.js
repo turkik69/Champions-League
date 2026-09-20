@@ -972,29 +972,49 @@ async function fetchGulfNewsItems() {
   return items.slice(0,8);
 }
 
+function isOmanTeamNews(item) {
+  const title=cleanHeadline(item?.title||"");
+  return /منتخب\s*(عُمان|عمان)|المنتخب\s*العُماني|المنتخب\s*العماني|\bOman\b/i.test(title);
+}
+
 async function processGulfNews(accessToken) {
   const items=await fetchGulfNewsItems();
   if (!items.length) return {action:"gulf-news-idle",count:0};
+
+  // Keep the Gulf Cup news page rich, but restrict push notifications to Oman team news only.
   await firebasePut("gulfCup27News/latest",items,accessToken);
+
+  const omanItems=items.filter(isOmanTeamNews);
+  if (!omanItems.length) {
+    return {action:"gulf-news-refreshed",count:items.length,omanCount:0,notification:"oman-only-no-match"};
+  }
+
   const state=(await firebaseGet("gulfCup27NewsState",accessToken))||{};
-  const top=items[0];
+  const top=omanItems[0];
   const fingerprint=base64Url(new TextEncoder().encode(top.title)).slice(0,28);
-  if (state.lastFingerprint===fingerprint) return {action:"gulf-news-refreshed",count:items.length,notification:"unchanged"};
+  if (state.lastFingerprint===fingerprint) {
+    return {action:"gulf-news-refreshed",count:items.length,omanCount:omanItems.length,notification:"unchanged"};
+  }
+
+  // Reduce noise: at most one Gulf Cup news notification every 12 hours.
   const lastSent=Number(state.lastSentAt||0);
-  if (Date.now()-lastSent<3*60*60_000) return {action:"gulf-news-refreshed",count:items.length,notification:"rate-limited"};
-  const result=await broadcast("📰 أخبار خليجي 27",top.title.slice(0,480),`gulf-news-${fingerprint}`,accessToken,{
-    type:"gulf-news",
+  if (Date.now()-lastSent<12*60*60_000) {
+    return {action:"gulf-news-refreshed",count:items.length,omanCount:omanItems.length,notification:"rate-limited-12h"};
+  }
+
+  const result=await broadcast("🇴🇲 أخبار منتخب عُمان",top.title.slice(0,480),`gulf-oman-news-${fingerprint}`,accessToken,{
+    type:"gulf-oman-news",
+    competition:"Gulf Cup 27",
     url:`${APP_URL}#gulf27`,
   });
-  await firebasePut("gulfCup27NewsState",{lastFingerprint:fingerprint,lastSentAt:Date.now(),title:top.title,...result},accessToken);
-  return {action:"gulf-news-sent",count:items.length,...result};
+  await firebasePut("gulfCup27NewsState",{lastFingerprint:fingerprint,lastSentAt:Date.now(),title:top.title,scope:"oman-only",...result},accessToken);
+  return {action:"gulf-oman-news-sent",count:items.length,omanCount:omanItems.length,...result};
 }
 
 async function processAll(env) {
   const accessToken = await getAccessToken(env);
   const results = [];
   results.push(await processPredictionAlerts(accessToken));
-  results.push(await processGulfPredictionAlerts(accessToken));
   results.push(await processAutomaticRoundNews(accessToken));
   results.push(await processGulfNews(accessToken));
   results.push(await processRoundNewsQueue(accessToken));
@@ -1092,7 +1112,7 @@ export default {
 
     return json({
       ok: true,
-      service: "UCL + Gulf Cup Push Notifications v12",
+      service: "UCL + Gulf Cup Push Notifications v13",
       project: PROJECT_ID,
       status: "online",
       schedule: SCHEDULE_URL,
@@ -1104,8 +1124,7 @@ export default {
         "fresh Arabic-first round news with relevance filters",
         "round news queue",
         "protected manual test push endpoint",
-        "Gulf Cup 27 prediction alerts",
-        "Gulf Cup 27 automatic news",
+        "Gulf Cup 27 Oman-team news only",
       ],
       debugUrl: "/?run=1",
       time: new Date().toISOString(),
