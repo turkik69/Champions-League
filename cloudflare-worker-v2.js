@@ -1105,11 +1105,18 @@ async function gulfESPNFinals(dates) {
 async function gulfSofascoreFinals() {
   try {
     // Season IDs are obtained dynamically so the importer cannot accidentally use 2024 results.
-    const seasons=await gulfJson("https://www.sofascore.com/api/v1/unique-tournament/622/seasons");
+    const sofaBase=await (async()=>{
+      for(const base of ["https://www.sofascore.com/api/v1","https://api.sofascore.com/api/v1"]){
+        try {return {base,seasons:await gulfJson(base+"/unique-tournament/622/seasons")};}
+        catch(e){console.log("Sofascore host unavailable:",base,String(e));}
+      }
+      throw new Error("Both Sofascore hosts unavailable");
+    })();
+    const seasons=sofaBase.seasons;
     const season=(seasons.seasons||[]).find(s=>String(s.year||s.name||"").includes("2026"));
     if(!season?.id) return [];
     const pages=await Promise.allSettled([0,1].map(page=>
-      gulfJson("https://www.sofascore.com/api/v1/unique-tournament/622/season/"+season.id+"/events/last/"+page)));
+      gulfJson(sofaBase.base+"/unique-tournament/622/season/"+season.id+"/events/last/"+page)));
     const out=[];
     for(const page of pages) {
       if(page.status!=="fulfilled") continue;
