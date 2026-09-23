@@ -1046,6 +1046,136 @@ async function processGulfNews(accessToken) {
   return {action:"gulf-oman-news-sent",count:items.length,omanCount:omanItems.length,...result};
 }
 
+
+// Automatically import confirmed Gulf Cup full-time results; never infer scores from a clock.
+function gulfTeamCode(name) {
+  const n=String(name||"").toLowerCase().normalize("NFKD").replace(/[\u064b-\u065f\u0670]/g,"").replace(/[^a-z\u0621-\u064a ]/g," ").replace(/\s+/g," ").trim();
+  const names=[
+    ["IRQ",/\biraq\b|العراق/],
+    ["OMA",/\boman\b|عمان/],
+    ["KSA",/saudi|السعود/],
+    ["KUW",/kuwait|الكويت/],
+    ["UAE",/emirates|الامارات/],
+    ["QAT",/\bqatar\b|قطر/],
+    ["BHR",/bahrain|البحرين/],
+    ["YEM",/yemen|اليمن/],
+  ];
+  return names.find(([,re])=>re.test(n))?.[0]||null;
+}
+
+function gulfResultMatch(fixture, home, away, date) {
+  if (gulfTeamCode(fixture.home)!==gulfTeamCode(home) ||
+      gulfTeamCode(fixture.away)!==gulfTeamCode(away)) return false;
+  const actual=Date.parse(fixture.ko||"");
+  const expected=Date.parse(date||"");
+  return Number.isFinite(actual)&&Number.isFinite(expected)&&Math.abs(actual-expected)<3*60*60_000;
+}
+
+async function gulfJson(url) {
+  const r=await fetch(url,{headers:{"accept":"application/json","user-agent":"Mozilla/5.0 GulfCupScoreSync/1.0"},signal:AbortSignal.timeout(7500)});
+  if(!r.ok) throw new Error("HTTP "+r.status);
+  return await r.json();
+}
+
+async function gulfESPNFinals(dates) {
+  const out=[];
+  for(const date of dates) {
+    try {
+      const json=await gulfJson("https://site.api.espn.com/apis/site/v2/sports/soccer/global.gulf_cup/scoreboard?dates="+date);
+      for(const e of json.events||[]) {
+        const comp=e.competitions?.[0];
+        const status=e.status?.type||comp?.status?.type||{};
+        if(status.completed!==true && !/STATUS_FINAL|STATUS_FULL_TIME|FINAL/i.test(status.name||"")) continue;
+        const home=comp?.competitors?.find(x=>x.homeAway==="home");
+        const away=comp?.competitors?.find(x=>x.homeAway==="away");
+        if(!home||!away||home.score==null||away.score==null) continue;
+        const h=Number(home.score),a=Number(away.score);
+        if(!Number.isInteger(h)||!Number.isInteger(a)||h<0||a<0) continue;
+        out.push({
+          home:home.team?.displayName||home.team?.name,
+          away:away.team?.displayName||away.team?.name,
+          ko:e.date||comp.date,h,a,source:"ESPN"
+        });
+      }
+    } catch(error) {console.log("Gulf ESPN unavailable:",String(error));}
+  }
+  return out;
+}
+
+async function gulfSofascoreFinals() {
+  try {
+    // Season IDs are obtained dynamically so the importer cannot accidentally use 2024 results.
+    const seasons=await gulfJson("https://www.sofascore.com/api/v1/unique-tournament/622/seasons");
+    const season=(seasons.seasons||[]).find(s=>String(s.year||s.name||"").includes("2026"));
+    if(!season?.id) return [];
+    const pages=await Promise.allSettled([0,1].map(page=>
+      gulfJson("https://www.sofascore.com/api/v1/unique-tournament/622/season/"+season.id+"/events/last/"+page)));
+    const out=[];
+    for(const page of pages) {
+      if(page.status!=="fulfilled") continue;
+      for(const e of page.value.events||[]) {
+        if(e.tournament?.uniqueTournament?.id && Number(e.tournament.uniqueTournament.id)!==622) continue;
+        if(e.status?.type!=="finished" && e.status?.code!==100) continue;
+        const h=e.homeScore?.current,a=e.awayScore?.current;
+        if(!Number.isInteger(h)||!Number.isInteger(a)) continue;
+        out.push({
+          home:e.homeTeam?.name,away:e.awayTeam?.name,
+          ko:new Date(e.startTimestamp*1000).toISOString(),h,a,source:"Sofascore"
+        });
+      }
+    }
+    return out;
+  }catch(error) {
+    console.log("Gulf Sofascore unavailable:",String(error));
+    return [];
+  }
+}
+
+async function processGulfResults(accessToken) {
+  const now=Date.now();
+  const sync=(await firebaseGet("gulfCup27ResultsSync",accessToken))||{};
+  if(now-Number(sync.lastCheckAt||0)<5*60_000) {
+    return {action:"gulf-results-rate-limited",nextCheckAt:Number(sync.lastCheckAt)+5*60_000};
+  }
+
+  const schedule=await fetchGulfSchedule();
+  const existing=(await firebaseGet("gulfCup27Results",accessToken))||{};
+  const pending=schedule.matches.filter(m=>{
+    const ko=Date.parse(m.ko||"");
+    return !existing[m.id] && m.predictable!==false &&
+      Number.isFinite(ko) && now>=ko+90*60_000 && now-ko<4*24*60*60_000;
+  });
+  if(!pending.length) return {action:"gulf-results-idle",pending:0};
+
+  // Mark the attempt early: an upstream outage should not trigger a fresh API scrape every minute.
+  await firebasePut("gulfCup27ResultsSync",{
+    lastCheckAt:now,pending:pending.map(m=>m.id),action:"checking"
+  },accessToken);
+
+  const dates=[...new Set(pending.map(m=>new Date(m.ko).toISOString().slice(0,10).replace(/-/g,"")))];
+  const [espn,sofa]=await Promise.all([gulfESPNFinals(dates),gulfSofascoreFinals()]);
+  const finals=[...espn,...sofa];
+  const saved=[];
+  for(const m of pending) {
+    const fixture=finals.find(x=>gulfResultMatch(x,m.home,m.away,m.ko));
+    if(!fixture) continue;
+    const result={h:fixture.h,a:fixture.a,source:fixture.source,verifiedFinal:true,updatedAt:now};
+    await firebasePut("gulfCup27Results/"+m.id,result,accessToken);
+    saved.push({id:m.id,h:result.h,a:result.a,source:result.source});
+  }
+  await firebasePut("gulfCup27ResultsSync",{
+    lastCheckAt:now,
+    checkedAt:now,
+    pending:pending.map(m=>m.id),
+    espnFinals:espn.length,
+    sofaFinals:sofa.length,
+    saved,
+    action:saved.length?"updated":"awaiting-confirmed-final"
+  },accessToken);
+  return {action:saved.length?"gulf-results-updated":"gulf-results-awaiting-confirmation",
+    pending:pending.length,espnFinals:espn.length,sofaFinals:sofa.length,saved};
+}
+
 async function safeStep(name, fn) {
   try {
     return await fn();
@@ -1059,6 +1189,7 @@ async function processAll(env) {
   const results = [];
   results.push(await safeStep("ucl-prediction-alerts",()=>processPredictionAlerts(accessToken)));
   results.push(await safeStep("gulf-prediction-alerts",()=>processGulfPredictionAlerts(accessToken)));
+  results.push(await safeStep("gulf-results-sync",()=>processGulfResults(accessToken)));
   results.push(await safeStep("ucl-auto-round-news",()=>processAutomaticRoundNews(accessToken)));
   results.push(await safeStep("gulf-oman-news",()=>processGulfNews(accessToken)));
   results.push(await safeStep("ucl-round-news-queue",()=>processRoundNewsQueue(accessToken)));
@@ -1156,7 +1287,7 @@ export default {
 
     return json({
       ok: true,
-      service: "UCL + Gulf Cup Push Notifications v15",
+      service: "UCL + Gulf Cup Push Notifications v16",
       project: PROJECT_ID,
       status: "online",
       schedule: SCHEDULE_URL,
@@ -1169,6 +1300,7 @@ export default {
         "round news queue",
         "protected manual test push endpoint",
         "Gulf Cup 27 prediction alerts",
+        "Gulf Cup 27 automatic verified final results",
         "Gulf Cup 27 Oman-team news only",
       ],
       debugUrl: "/?run=1",
