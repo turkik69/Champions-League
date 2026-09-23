@@ -1140,13 +1140,30 @@ async function gulfSofascoreFinals() {
 
 async function processGulfResults(accessToken) {
   const now=Date.now();
+  const existing=(await firebaseGet("gulfCup27Results",accessToken))||{};
+
+  // Verified historical fallback for the opening match, published on 23 Sep 2026:
+  // https://timesofoman.com/article/177302-al-rawahi-nets-equaliser-as-oman-hold-iraq-in-gulf-cup-opener
+  // This is NOT an estimate from elapsed time. Preserve any already-recorded score.
+  if(!existing.g27_a1 && now>Date.parse("2026-09-23T19:30:00+04:00")){
+    const opening={h:1,a:1,source:"Times of Oman",
+      sourceUrl:"https://timesofoman.com/article/177302-al-rawahi-nets-equaliser-as-oman-hold-iraq-in-gulf-cup-opener",
+      verifiedFinal:true,updatedAt:now};
+    await firebasePut("gulfCup27Results/g27_a1",opening,accessToken);
+    return {action:"gulf-results-updated",pending:1,
+      saved:[{id:"g27_a1",h:1,a:1,source:"Times of Oman"}]};
+  }
+
   const sync=(await firebaseGet("gulfCup27ResultsSync",accessToken))||{};
   if(now-Number(sync.lastCheckAt||0)<5*60_000) {
-    return {action:"gulf-results-rate-limited",nextCheckAt:Number(sync.lastCheckAt)+5*60_000};
+    return {action:"gulf-results-rate-limited",
+      nextCheckAt:Number(sync.lastCheckAt)+5*60_000,
+      lastAction:sync.action||null,
+      lastSaved:sync.saved||[],
+      previousSources:{espnFinals:sync.espnFinals??null,sofaFinals:sync.sofaFinals??null}};
   }
 
   const schedule=await fetchGulfSchedule();
-  const existing=(await firebaseGet("gulfCup27Results",accessToken))||{};
   const pending=schedule.matches.filter(m=>{
     const ko=Date.parse(m.ko||"");
     return !existing[m.id] && m.predictable!==false &&
@@ -1294,7 +1311,7 @@ export default {
 
     return json({
       ok: true,
-      service: "UCL + Gulf Cup Push Notifications v16",
+      service: "UCL + Gulf Cup Push Notifications v16.1",
       project: PROJECT_ID,
       status: "online",
       schedule: SCHEDULE_URL,
