@@ -1200,6 +1200,187 @@ async function processGulfResults(accessToken) {
     pending:pending.length,espnFinals:espn.length,sofaFinals:sofa.length,saved};
 }
 
+
+const UCL_TEAM_SLUGS={
+  "أ.إي.ك أثينا": "aek-athens",
+  "لاسك لينز": "lask",
+  "كلوب بروج": "club-brugge",
+  "أستون فيلا": "aston-villa",
+  "بوروسيا دورتموند": "borussia-dortmund",
+  "فياريال": "villarreal",
+  "بورتو": "porto",
+  "مانشستر سيتي": "manchester-city",
+  "ليل": "lille",
+  "ريال بيتيس": "real-betis",
+  "ريال مدريد": "real-madrid",
+  "إنتر ميلان": "inter",
+  "برشلونة": "barcelona",
+  "فينورد": "feyenoord",
+  "شتوتغارت": "stuttgart",
+  "فايكينغ": "viking-fk",
+  "ليفربول": "liverpool",
+  "أتلتيكو مدريد": "atletico-madrid",
+  "باريس سان جيرمان": "paris-saint-germain",
+  "سلوفان براتيسلافا": "slovan-bratislava",
+  "سبورتينغ لشبونة": "sporting-cp",
+  "غلطة سراي": "galatasaray",
+  "نابولي": "napoli",
+  "أرسنال": "arsenal",
+  "فنربخشة": "fenerbahce",
+  "روما": "roma",
+  "بي إس في آيندهوفن": "psv-eindhoven",
+  "شاختار دونيتسك": "shakhtar-donetsk",
+  "كومو": "como-1907",
+  "لايبزيغ": "rb-leipzig",
+  "بايرن ميونخ": "bayern-munich",
+  "بودو غليمت": "bodo-glimt",
+  "مانشستر يونايتد": "manchester-united",
+  "سابح": "kf-sabail",
+  "سلافيا براغ": "slavia-prague",
+  "لانس": "rc-lens"
+};
+const UCL_ALIASES={
+  "aek-athens":["aek-athens","aek-athina","aek-athens-fc","aek"],
+  "lask":["lask","lask-linz"],
+  "club-brugge":["club-brugge","club-brugge-kv","brugge"],
+  "aston-villa":["aston-villa","aston-villa-fc"],
+  "borussia-dortmund":["borussia-dortmund","dortmund"],
+  "villarreal":["villarreal","villarreal-cf"],
+  "porto":["porto","fc-porto"],
+  "manchester-city":["manchester-city","man-city"],
+  "lille":["lille","lille-osc"],
+  "real-betis":["real-betis","real-betis-balompie","betis"],
+  "real-madrid":["real-madrid","real-madrid-cf"],
+  "inter":["inter","inter-milan","internazionale","fc-internazionale-milano"],
+  "barcelona":["barcelona","fc-barcelona"],
+  "feyenoord":["feyenoord","feyenoord-rotterdam"],
+  "stuttgart":["stuttgart","vfb-stuttgart"],
+  "viking-fk":["viking-fk","viking"],
+  "liverpool":["liverpool","liverpool-fc"],
+  "atletico-madrid":["atletico-madrid","atletico-de-madrid","atletico"],
+  "paris-saint-germain":["paris-saint-germain","paris-sg","psg"],
+  "slovan-bratislava":["slovan-bratislava","sk-slovan-bratislava"],
+  "sporting-cp":["sporting-cp","sporting-lisbon","sporting-clube-de-portugal"],
+  "galatasaray":["galatasaray","galatasaray-sk"],
+  "napoli":["napoli","ssc-napoli"],
+  "arsenal":["arsenal","arsenal-fc"],
+  "fenerbahce":["fenerbahce","fenerbahce-sk"],
+  "roma":["roma","as-roma"],
+  "psv-eindhoven":["psv-eindhoven","psv"],
+  "shakhtar-donetsk":["shakhtar-donetsk","shakhtar"],
+  "como-1907":["como-1907","como"],
+  "rb-leipzig":["rb-leipzig","rasenballsport-leipzig","leipzig"],
+  "bayern-munich":["bayern-munich","bayern-munchen","fc-bayern-munchen","bayern"],
+  "bodo-glimt":["bodo-glimt","fk-bodo-glimt"],
+  "manchester-united":["manchester-united","man-united","man-utd"],
+  "kf-sabail":["kf-sabail","sabail"],
+  "slavia-prague":["slavia-prague","slavia-praha","sk-slavia-prague"],
+  "rc-lens":["rc-lens","lens"]
+};
+function uclSlug(value){
+  return String(value||"").toLowerCase().normalize("NFKD").replace(/[\u0300-\u036f]/g,"")
+    .replace(/&/g,"and").replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"")
+    .replace(/^fc-|^cf-/g,"").replace(/-fc$|-cf$/g,"");
+}
+function uclTeamMatches(arabicName,providerName){
+  const slug=UCL_TEAM_SLUGS[arabicName];
+  const provider=uclSlug(providerName);
+  if(!slug||!provider) return false;
+  const aliases=UCL_ALIASES[slug]||[slug];
+  return aliases.some(alias=>uclSlug(alias)===provider);
+}
+function uclFixtureMatches(match,final){
+  if(!uclTeamMatches(match.home,final.home)||!uclTeamMatches(match.away,final.away))return false;
+  const expected=Date.parse(match.ko||""),actual=Date.parse(final.ko||"");
+  return Number.isFinite(actual)&&Number.isFinite(expected)&&Math.abs(expected-actual)<=4*3600_000;
+}
+async function fetchUclEspnFinals(dates){
+  const out=[];
+  for(const date of dates){
+    try{
+      const data=await gulfJson("https://site.api.espn.com/apis/site/v2/sports/soccer/uefa.champions/scoreboard?dates="+date);
+      for(const event of data.events||[]){
+        const comp=event.competitions?.[0],status=event.status?.type||comp?.status?.type||{};
+        if(status.completed!==true&&!/STATUS_FINAL|STATUS_FULL_TIME/i.test(status.name||""))continue;
+        const home=comp?.competitors?.find(t=>t.homeAway==="home"),away=comp?.competitors?.find(t=>t.homeAway==="away");
+        if(!home||!away)continue;
+        const h=Number(home.score),a=Number(away.score);
+        if(home.score==null||away.score==null||!Number.isInteger(h)||!Number.isInteger(a)||h<0||a<0)continue;
+        out.push({home:home.team?.displayName||home.team?.name,
+          away:away.team?.displayName||away.team?.name,
+          ko:event.date||comp.date,h,a,source:"ESPN"});
+      }
+    }catch(error){console.log("UCL ESPN score source unavailable:",String(error));}
+  }
+  return out;
+}
+async function fetchUclSofaFinals(){
+  try{
+    const tournamentId=7;
+    let base,seasons;
+    for(const host of ["https://www.sofascore.com/api/v1","https://api.sofascore.com/api/v1"]){
+      try{seasons=await gulfJson(host+"/unique-tournament/"+tournamentId+"/seasons");base=host;break;}
+      catch(error){console.log("UCL Sofascore host unavailable:",String(error));}
+    }
+    if(!base)return [];
+    const season=(seasons.seasons||[]).find(s=>String(s.year||s.name||"").includes("2026"));
+    if(!season?.id)return [];
+    const pages=await Promise.allSettled([0,1,2].map(i=>
+      gulfJson(base+"/unique-tournament/"+tournamentId+"/season/"+season.id+"/events/last/"+i)));
+    const out=[];
+    for(const page of pages){
+      if(page.status!=="fulfilled")continue;
+      for(const e of page.value.events||[]){
+        if(e.tournament?.uniqueTournament?.id&&Number(e.tournament.uniqueTournament.id)!==tournamentId)continue;
+        if(e.status?.type!=="finished"&&e.status?.code!==100)continue;
+        const h=e.homeScore?.current,a=e.awayScore?.current;
+        if(!Number.isInteger(h)||!Number.isInteger(a)||!Number.isFinite(e.startTimestamp))continue;
+        out.push({home:e.homeTeam?.name,away:e.awayTeam?.name,
+          ko:new Date(e.startTimestamp*1000).toISOString(),h,a,source:"Sofascore"});
+      }
+    }
+    return out;
+  }catch(error){console.log("UCL Sofascore score source unavailable:",String(error));return [];}
+}
+async function processUclResults(accessToken){
+  const now=Date.now();
+  const sync=(await firebaseGet("uclResultsSync",accessToken))||{};
+  if(now-Number(sync.lastCheckAt||0)<5*60_000){
+    return {action:"ucl-results-rate-limited",nextCheckAt:Number(sync.lastCheckAt)+5*60_000,
+      lastAction:sync.action||null,lastSaved:sync.saved||[],lastSources:sync.sources||null};
+  }
+  const schedule=await fetchSchedule();
+  const existing=(await firebaseGet("uclResults",accessToken))||{};
+  // Do not replace administrator results. Only import verifiable, completed and correctly matched fixtures.
+  const pending=schedule.matches.filter(m=>{
+    const ko=Date.parse(m.ko||"");
+    return !existing[m.id]&&Number.isFinite(ko)&&now>=ko+105*60_000
+      &&now-ko<5*24*60*60_000;
+  });
+  if(!pending.length)return {action:"ucl-results-idle",pending:0};
+  await firebasePut("uclResultsSync",{lastCheckAt:now,action:"checking",pending:pending.map(m=>m.id)},accessToken);
+
+  const dates=[...new Set(pending.flatMap(m=>{
+    const t=Date.parse(m.ko);
+    return [-1,0,1].map(offset=>new Date(t+offset*86400_000).toISOString().slice(0,10).replace(/-/g,""));
+  }))];
+  const [espn,sofa]=await Promise.all([fetchUclEspnFinals(dates),fetchUclSofaFinals()]);
+  const finals=[...espn,...sofa],saved=[];
+  for(const match of pending){
+    const fixture=finals.find(f=>uclFixtureMatches(match,f));
+    if(!fixture)continue;
+    const result={h:fixture.h,a:fixture.a,source:fixture.source,
+      verifiedFinal:true,updatedAt:Date.now()};
+    await firebasePut("uclResults/"+match.id,result,accessToken);
+    saved.push({id:match.id,home:match.home,away:match.away,h:result.h,a:result.a,source:fixture.source});
+  }
+  const state={lastCheckAt:now,action:saved.length?"updated":"awaiting-confirmed-final",
+    pending:pending.map(m=>m.id),sources:{espnFinals:espn.length,sofaFinals:sofa.length},saved};
+  await firebasePut("uclResultsSync",state,accessToken);
+  return {action:saved.length?"ucl-results-updated":"ucl-results-awaiting-confirmation",
+    pending:pending.length,sources:state.sources,saved};
+}
+
 async function safeStep(name, fn) {
   try {
     return await fn();
@@ -1212,6 +1393,7 @@ async function processAll(env) {
   const accessToken = await getAccessToken(env);
   const results = [];
   results.push(await safeStep("ucl-prediction-alerts",()=>processPredictionAlerts(accessToken)));
+  results.push(await safeStep("ucl-results-sync",()=>processUclResults(accessToken)));
   results.push(await safeStep("gulf-prediction-alerts",()=>processGulfPredictionAlerts(accessToken)));
   results.push(await safeStep("gulf-results-sync",()=>processGulfResults(accessToken)));
   results.push(await safeStep("ucl-auto-round-news",()=>processAutomaticRoundNews(accessToken)));
@@ -1311,7 +1493,7 @@ export default {
 
     return json({
       ok: true,
-      service: "UCL + Gulf Cup Push Notifications v16.1",
+      service: "UCL + Gulf Cup Push Notifications v17",
       project: PROJECT_ID,
       status: "online",
       schedule: SCHEDULE_URL,
@@ -1325,6 +1507,7 @@ export default {
         "protected manual test push endpoint",
         "Gulf Cup 27 prediction alerts",
         "Gulf Cup 27 automatic verified final results",
+        "UEFA Champions League automatic verified final results",
         "Gulf Cup 27 Oman-team news only",
       ],
       debugUrl: "/?run=1",
