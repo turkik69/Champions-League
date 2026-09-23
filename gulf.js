@@ -29,5 +29,17 @@ function renderNews(){const host=el('newsList');if(!host)return;host.innerHTML=(
 function setupTabs(){document.querySelectorAll('.gulf-tab').forEach(b=>b.addEventListener('click',()=>{document.querySelectorAll('.gulf-tab').forEach(x=>x.classList.remove('active'));document.querySelectorAll('.tab-pane').forEach(x=>x.classList.remove('active'));b.classList.add('active');el(`tab-${b.dataset.tab}`)?.classList.add('active');lucide?.createIcons()}))}
 function updateCountdown(){const start=new Date('2026-09-23T17:30:00+03:00').getTime(),d=start-Date.now();if(!el('countdown'))return;if(d<=0){el('countdown').textContent='البطولة انطلقت — أهلًا بالخليج 🇸🇦';return}const days=Math.floor(d/86400000),hrs=Math.floor((d%86400000)/3600000),mins=Math.floor((d%3600000)/60000);el('countdown').textContent=`متبقي على الافتتاح: ${days} يوم · ${hrs} ساعة · ${mins} دقيقة`}
 function backToMain(){if(window.parent&&window.parent!==window&&typeof window.parent.closeGulfCup==='function'){window.parent.closeGulfCup();return}location.href='index.html'}
-async function init(){setupTabs();try{const s=await fetch(`gulf-schedule.json?v=${Date.now()}`,{cache:'no-store'}).then(r=>r.json());MATCHES=Array.isArray(s.matches)?s.matches:[]}catch{MATCHES=[]}const data=await Promise.all([currentUserId?fbGet(`gulfCup27Predictions/${currentUserId}`):Promise.resolve({}),fbGet('gulfCup27Predictions'),fbGet('gulfCup27Results'),fbGet('users'),fbGet('gulfCup27News/latest')]);myPreds=data[0]||{};allPreds=data[1]||{};results=data[2]||{};users=data[3]||{};const rawNews=data[4]||[];newsItems=Array.isArray(rawNews)?rawNews:Object.values(rawNews);renderGroups();renderTeams();renderMatches();renderRanking();renderNews();updateCountdown();setInterval(()=>{updateCountdown();renderMatches()},60000);setTimeout(()=>lucide?.createIcons(),100)}
+async function refreshGulfScoreboard(){
+  try {
+    // Check the same Firebase result records that the Cloudflare cron updates.
+    const latest=await fbGet('gulfCup27Results');
+    if(latest && JSON.stringify(latest)!==JSON.stringify(results)){
+      results=latest;
+      renderGroups();
+      renderMatches();
+      renderRanking();
+    }
+  }catch(err){console.warn('Gulf Cup results refresh:',err)}
+}
+async function init(){setupTabs();try{const s=await fetch(`gulf-schedule.json?v=${Date.now()}`,{cache:'no-store'}).then(r=>r.json());MATCHES=Array.isArray(s.matches)?s.matches:[]}catch{MATCHES=[]}const data=await Promise.all([currentUserId?fbGet(`gulfCup27Predictions/${currentUserId}`):Promise.resolve({}),fbGet('gulfCup27Predictions'),fbGet('gulfCup27Results'),fbGet('users'),fbGet('gulfCup27News/latest')]);myPreds=data[0]||{};allPreds=data[1]||{};results=data[2]||{};users=data[3]||{};const rawNews=data[4]||[];newsItems=Array.isArray(rawNews)?rawNews:Object.values(rawNews);renderGroups();renderTeams();renderMatches();renderRanking();renderNews();updateCountdown();setInterval(()=>{updateCountdown();renderMatches();if(!document.hidden)refreshGulfScoreboard()},60000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)refreshGulfScoreboard()});window.addEventListener('focus',refreshGulfScoreboard);setTimeout(()=>lucide?.createIcons(),100)}
 window.savePrediction=savePrediction;window.backToMain=backToMain;document.addEventListener('DOMContentLoaded',init);
