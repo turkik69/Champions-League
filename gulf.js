@@ -41,5 +41,42 @@ async function refreshGulfScoreboard(){
     }
   }catch(err){console.warn('Gulf Cup results refresh:',err)}
 }
+async function manualRefreshResults(){
+  const btn=el('refreshResultsBtn');
+  if(!btn)return;
+  const original=btn.innerHTML;
+  btn.disabled=true;
+  btn.classList.add('loading');
+  btn.innerHTML='<i data-lucide="loader-circle"></i><span>جاري التحديث…</span>';
+  lucide?.createIcons();
+  try{
+    const r=await fetch('https://ucl-push.turki-k69.workers.dev/?gulfRefresh=1&ts='+Date.now(),{cache:'no-store'});
+    const data=await r.json();
+    if(!r.ok||!data.ok) throw new Error(data?.error||'تعذر جلب النتائج');
+    await refreshGulfScoreboard();
+    const action=data?.result?.action||'';
+    const saved=data?.result?.saved||[];
+    if(action==='gulf-results-updated'){
+      const msg=saved.length
+        ? 'تم تحديث '+saved.length+' نتيجة وتحديث نقاط المتسابقين ✅'
+        : 'تم تحديث النتائج والنقاط ✅';
+      toast(msg);
+    }else if(action==='gulf-results-idle'){
+      toast('لا توجد نتائج جديدة حالياً');
+    }else if(action==='gulf-results-awaiting-confirmation'){
+      toast('تم الفحص، لكن النتيجة النهائية لم تتأكد من المصدر بعد');
+    }else{
+      toast('تم فحص النتائج');
+    }
+  }catch(err){
+    console.warn('Manual Gulf refresh failed',err);
+    toast('تعذر تحديث النتائج الآن، حاول مرة أخرى');
+  }finally{
+    btn.disabled=false;
+    btn.classList.remove('loading');
+    btn.innerHTML=original;
+    lucide?.createIcons();
+  }
+}
 async function init(){setupTabs();try{const s=await fetch(`gulf-schedule.json?v=${Date.now()}`,{cache:'no-store'}).then(r=>r.json());MATCHES=Array.isArray(s.matches)?s.matches:[]}catch{MATCHES=[]}const data=await Promise.all([currentUserId?fbGet(`gulfCup27Predictions/${currentUserId}`):Promise.resolve({}),fbGet('gulfCup27Predictions'),fbGet('gulfCup27Results'),fbGet('users'),fbGet('gulfCup27News/latest')]);myPreds=data[0]||{};allPreds=data[1]||{};results=data[2]||{};users=data[3]||{};const rawNews=data[4]||[];newsItems=Array.isArray(rawNews)?rawNews:Object.values(rawNews);renderGroups();renderTeams();renderMatches();renderRanking();renderNews();updateCountdown();setInterval(()=>{updateCountdown();renderMatches();if(!document.hidden)refreshGulfScoreboard()},60000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)refreshGulfScoreboard()});window.addEventListener('focus',refreshGulfScoreboard);setTimeout(()=>lucide?.createIcons(),100)}
-window.savePrediction=savePrediction;window.backToMain=backToMain;document.addEventListener('DOMContentLoaded',init);
+window.savePrediction=savePrediction;window.backToMain=backToMain;window.manualRefreshResults=manualRefreshResults;document.addEventListener('DOMContentLoaded',init);
