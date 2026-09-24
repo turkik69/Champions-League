@@ -13,7 +13,12 @@ const NEWS_RETRY_MINUTES = 30;
 function json(data, status = 200) {
   return new Response(JSON.stringify(data, null, 2), {
     status,
-    headers: { "content-type": "application/json; charset=utf-8" },
+    headers: {
+      "content-type": "application/json; charset=utf-8",
+      "access-control-allow-origin": "*",
+      "access-control-allow-methods": "GET, OPTIONS",
+      "access-control-allow-headers": "content-type"
+    },
   });
 }
 
@@ -1138,7 +1143,7 @@ async function gulfSofascoreFinals() {
   }
 }
 
-async function processGulfResults(accessToken) {
+async function processGulfResults(accessToken, force=false) {
   const now=Date.now();
   const existing=(await firebaseGet("gulfCup27Results",accessToken))||{};
 
@@ -1155,7 +1160,7 @@ async function processGulfResults(accessToken) {
   }
 
   const sync=(await firebaseGet("gulfCup27ResultsSync",accessToken))||{};
-  if(now-Number(sync.lastCheckAt||0)<5*60_000) {
+  if(!force && now-Number(sync.lastCheckAt||0)<5*60_000) {
     return {action:"gulf-results-rate-limited",
       nextCheckAt:Number(sync.lastCheckAt)+5*60_000,
       lastAction:sync.action||null,
@@ -1483,6 +1488,27 @@ export default {
       }
     }
 
+    if (request.method === "OPTIONS") {
+      return new Response(null, {
+        status: 204,
+        headers: {
+          "access-control-allow-origin": "*",
+          "access-control-allow-methods": "GET, OPTIONS",
+          "access-control-allow-headers": "content-type"
+        }
+      });
+    }
+
+    if (url.searchParams.get("gulfRefresh") === "1") {
+      try {
+        const accessToken = await getAccessToken(env);
+        const result = await processGulfResults(accessToken, true);
+        return json({ ok: true, manualRefresh: true, result, time: new Date().toISOString() });
+      } catch (error) {
+        return json({ ok: false, manualRefresh: true, error: error?.message || String(error) }, 500);
+      }
+    }
+
     if (url.searchParams.get("run") === "1") {
       try {
         return json({ ok: true, debug: true, results: await processAll(env) });
@@ -1493,7 +1519,7 @@ export default {
 
     return json({
       ok: true,
-      service: "UCL + Gulf Cup Push Notifications v17",
+      service: "UCL + Gulf Cup Push Notifications v18",
       project: PROJECT_ID,
       status: "online",
       schedule: SCHEDULE_URL,
@@ -1507,6 +1533,7 @@ export default {
         "protected manual test push endpoint",
         "Gulf Cup 27 prediction alerts",
         "Gulf Cup 27 automatic verified final results",
+        "Gulf Cup 27 manual result refresh endpoint",
         "UEFA Champions League automatic verified final results",
         "Gulf Cup 27 Oman-team news only",
       ],
