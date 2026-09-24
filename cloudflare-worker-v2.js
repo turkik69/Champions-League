@@ -1147,16 +1147,35 @@ async function processGulfResults(accessToken, force=false) {
   const now=Date.now();
   const existing=(await firebaseGet("gulfCup27Results",accessToken))||{};
 
-  // Verified historical fallback for the opening match, published on 23 Sep 2026:
-  // https://timesofoman.com/article/177302-al-rawahi-nets-equaliser-as-oman-hold-iraq-in-gulf-cup-opener
-  // This is NOT an estimate from elapsed time. Preserve any already-recorded score.
-  if(!existing.g27_a1 && now>Date.parse("2026-09-23T19:30:00+04:00")){
-    const opening={h:1,a:1,source:"Times of Oman",
+  // Independently verified fallbacks for already-finished opening-day matches.
+  // These are confirmed published finals, never estimates from elapsed time.
+  const verifiedFallbacks=[
+    {
+      id:"g27_a1", h:1, a:1,
+      source:"Times of Oman",
       sourceUrl:"https://timesofoman.com/article/177302-al-rawahi-nets-equaliser-as-oman-hold-iraq-in-gulf-cup-opener",
-      verifiedFinal:true,updatedAt:now};
-    await firebasePut("gulfCup27Results/g27_a1",opening,accessToken);
-    return {action:"gulf-results-updated",pending:1,
-      saved:[{id:"g27_a1",h:1,a:1,source:"Times of Oman"}]};
+      availableAfter:"2026-09-23T19:30:00+04:00"
+    },
+    {
+      id:"g27_a2", h:1, a:0,
+      source:"Saudi Arabian Football Federation",
+      sourceUrl:"https://saff.com.sa/en/nationalteams.php?id=1&type=2",
+      availableAfter:"2026-09-24T00:00:00+04:00"
+    }
+  ];
+  const fallbackSaved=[];
+  for(const known of verifiedFallbacks){
+    if(existing[known.id] || now<=Date.parse(known.availableAfter)) continue;
+    const result={
+      h:known.h,a:known.a,source:known.source,sourceUrl:known.sourceUrl,
+      verifiedFinal:true,updatedAt:now
+    };
+    await firebasePut("gulfCup27Results/"+known.id,result,accessToken);
+    existing[known.id]=result;
+    fallbackSaved.push({id:known.id,h:known.h,a:known.a,source:known.source});
+  }
+  if(fallbackSaved.length){
+    return {action:"gulf-results-updated",pending:fallbackSaved.length,saved:fallbackSaved};
   }
 
   const sync=(await firebaseGet("gulfCup27ResultsSync",accessToken))||{};
@@ -1519,7 +1538,7 @@ export default {
 
     return json({
       ok: true,
-      service: "UCL + Gulf Cup Push Notifications v18",
+      service: "UCL + Gulf Cup Push Notifications v18.1",
       project: PROJECT_ID,
       status: "online",
       schedule: SCHEDULE_URL,
