@@ -1233,12 +1233,25 @@ async function processGulfResults(accessToken, force=false) {
       availableAfter:"2026-09-27T00:00:00+04:00"
     },
     {
-      id:"g27_a4", h:0, a:2,
-      source:"Elbotola",
-      sourceUrl:"https://www.elbotola.com/en/analytics/match/y0or5jh8vovlqwz",
+      id:"g27_a4", h:0, a:3,
+      source:"Arab News",
+      sourceUrl:"https://www.arabnews.com/saudi-football/saudi-arabia-topple-oman-with-first-half-masterclass-as-al-brikan-returns-to-scoring-form-3003301",
       availableAfter:"2026-09-27T00:00:00+04:00"
     }
   ];
+  // Repair the previously stored incorrect Oman-Saudi score, if present.
+  if(existing.g27_a4 && (Number(existing.g27_a4.h)!==0 || Number(existing.g27_a4.a)!==3)){
+    const corrected={
+      h:0,a:3,source:"Arab News",
+      sourceUrl:"https://www.arabnews.com/saudi-football/saudi-arabia-topple-oman-with-first-half-masterclass-as-al-brikan-returns-to-scoring-form-3003301",
+      verifiedFinal:true,corrected:true,updatedAt:now
+    };
+    await firebasePut("gulfCup27Results/g27_a4",corrected,accessToken);
+    existing.g27_a4=corrected;
+    return {action:"gulf-results-corrected",pending:1,
+      saved:[{id:"g27_a4",h:0,a:3,source:"Arab News"}]};
+  }
+
   const fallbackSaved=[];
   for(const known of verifiedFallbacks){
     if(existing[known.id] || now<=Date.parse(known.availableAfter)) continue;
@@ -1622,7 +1635,7 @@ export default {
 
     return json({
       ok: true,
-      service: "UCL + Gulf Cup Push Notifications v19",
+      service: "UCL + Gulf Cup Push Notifications v19.1",
       project: PROJECT_ID,
       status: "online",
       schedule: SCHEDULE_URL,
