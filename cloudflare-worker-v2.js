@@ -1143,6 +1143,70 @@ async function gulfSofascoreFinals() {
   }
 }
 
+
+const GULF_NEWS_ALIASES={
+  "السعودية":["السعودية","منتخب السعودية","saudi arabia","saudi"],
+  "العراق":["العراق","منتخب العراق","iraq"],
+  "عُمان":["عُمان","عمان","منتخب عمان","منتخب عُمان","oman"],
+  "الكويت":["الكويت","منتخب الكويت","kuwait"],
+  "الإمارات":["الإمارات","الامارات","منتخب الإمارات","uae","united arab emirates"],
+  "قطر":["قطر","منتخب قطر","qatar"],
+  "البحرين":["البحرين","منتخب البحرين","bahrain"],
+  "اليمن":["اليمن","منتخب اليمن","yemen"]
+};
+function gulfTextHasTeam(text,team){
+  const low=String(text||"").toLowerCase();
+  return (GULF_NEWS_ALIASES[team]||[]).some(a=>low.includes(a.toLowerCase()));
+}
+function gulfScoreFromNewsTitle(title,match){
+  const text=String(title||"").replace(/\s+/g," ").trim();
+  if(!gulfTextHasTeam(text,match.home)||!gulfTextHasTeam(text,match.away)) return null;
+  const score=text.match(/(?:^|\s|\()([0-9]{1,2})\s*[-–—:]\s*([0-9]{1,2})(?:\s|\)|$)/);
+  if(!score) return null;
+  const homeAliases=GULF_NEWS_ALIASES[match.home]||[],awayAliases=GULF_NEWS_ALIASES[match.away]||[];
+  const low=text.toLowerCase();
+  const homePositions=homeAliases.map(a=>low.indexOf(a.toLowerCase())).filter(i=>i>=0);
+  const awayPositions=awayAliases.map(a=>low.indexOf(a.toLowerCase())).filter(i=>i>=0);
+  if(!homePositions.length||!awayPositions.length) return null;
+  const firstHome=Math.min(...homePositions),firstAway=Math.min(...awayPositions);
+  const s1=Number(score[1]),s2=Number(score[2]);
+  if(!Number.isInteger(s1)||!Number.isInteger(s2)||s1>20||s2>20) return null;
+  return firstHome<firstAway?{h:s1,a:s2}:{h:s2,a:s1};
+}
+async function fetchGulfNewsFinals(pending){
+  const out=[];
+  for(const match of pending){
+    const kickoff=Date.parse(match.ko||"");
+    const qEn=`${match.home} ${match.away} Gulf Cup 27 result 2026`;
+    const qAr=`${match.home} ${match.away} كأس الخليج 27 نتيجة`;
+    const batches=await Promise.allSettled([
+      fetchBingNews(qAr,"ar"),fetchGoogleNews(qAr),
+      fetchBingNews(qEn,"en"),fetchGoogleNews(qEn)
+    ]);
+    const items=batches.flatMap(x=>x.status==="fulfilled"?x.value:[]);
+    const candidates=[];
+    for(const item of items){
+      if(item.publishedAt&&Number.isFinite(kickoff)&&item.publishedAt<kickoff-12*3600_000) continue;
+      const score=gulfScoreFromNewsTitle(item.title,match);
+      if(!score) continue;
+      candidates.push({...score,title:item.title,link:item.link||"",publishedAt:item.publishedAt||0});
+    }
+    const groups=new Map();
+    for(const x of candidates){
+      const key=x.h+"-"+x.a;
+      if(!groups.has(key))groups.set(key,[]);
+      groups.get(key).push(x);
+    }
+    const agreed=[...groups.values()].sort((a,b)=>b.length-a.length)[0];
+    if(agreed?.length>=2){
+      const best=agreed.sort((a,b)=>(b.publishedAt||0)-(a.publishedAt||0))[0];
+      out.push({home:match.home,away:match.away,ko:match.ko,h:best.h,a:best.a,
+        source:"News consensus",sourceUrl:best.link,evidenceCount:agreed.length});
+    }
+  }
+  return out;
+}
+
 async function processGulfResults(accessToken, force=false) {
   const now=Date.now();
   const existing=(await firebaseGet("gulfCup27Results",accessToken))||{};
@@ -1161,6 +1225,18 @@ async function processGulfResults(accessToken, force=false) {
       source:"Saudi Arabian Football Federation",
       sourceUrl:"https://saff.com.sa/en/nationalteams.php?id=1&type=2",
       availableAfter:"2026-09-24T00:00:00+04:00"
+    },
+    {
+      id:"g27_a3", h:2, a:3,
+      source:"Roya Sports",
+      sourceUrl:"https://roya-sports.com/en/match/kuwait-vs-iraq-19870245",
+      availableAfter:"2026-09-27T00:00:00+04:00"
+    },
+    {
+      id:"g27_a4", h:0, a:2,
+      source:"Elbotola",
+      sourceUrl:"https://www.elbotola.com/en/analytics/match/y0or5jh8vovlqwz",
+      availableAfter:"2026-09-27T00:00:00+04:00"
     }
   ];
   const fallbackSaved=[];
@@ -1201,13 +1277,19 @@ async function processGulfResults(accessToken, force=false) {
   },accessToken);
 
   const dates=[...new Set(pending.map(m=>new Date(m.ko).toISOString().slice(0,10).replace(/-/g,"")))];
-  const [espn,sofa]=await Promise.all([gulfESPNFinals(dates),gulfSofascoreFinals()]);
-  const finals=[...espn,...sofa];
+  const [espn,sofa,newsConsensus]=await Promise.all([
+    gulfESPNFinals(dates),
+    gulfSofascoreFinals(),
+    fetchGulfNewsFinals(pending)
+  ]);
+  const finals=[...espn,...sofa,...newsConsensus];
   const saved=[];
   for(const m of pending) {
     const fixture=finals.find(x=>gulfResultMatch(x,m.home,m.away,m.ko));
     if(!fixture) continue;
-    const result={h:fixture.h,a:fixture.a,source:fixture.source,verifiedFinal:true,updatedAt:now};
+    const result={h:fixture.h,a:fixture.a,source:fixture.source,
+      sourceUrl:fixture.sourceUrl||null,evidenceCount:fixture.evidenceCount||null,
+      verifiedFinal:true,updatedAt:now};
     await firebasePut("gulfCup27Results/"+m.id,result,accessToken);
     saved.push({id:m.id,h:result.h,a:result.a,source:result.source});
   }
@@ -1217,11 +1299,13 @@ async function processGulfResults(accessToken, force=false) {
     pending:pending.map(m=>m.id),
     espnFinals:espn.length,
     sofaFinals:sofa.length,
+    newsConsensusFinals:newsConsensus.length,
     saved,
     action:saved.length?"updated":"awaiting-confirmed-final"
   },accessToken);
   return {action:saved.length?"gulf-results-updated":"gulf-results-awaiting-confirmation",
-    pending:pending.length,espnFinals:espn.length,sofaFinals:sofa.length,saved};
+    pending:pending.length,espnFinals:espn.length,sofaFinals:sofa.length,
+    newsConsensusFinals:newsConsensus.length,saved};
 }
 
 
@@ -1538,7 +1622,7 @@ export default {
 
     return json({
       ok: true,
-      service: "UCL + Gulf Cup Push Notifications v18.1",
+      service: "UCL + Gulf Cup Push Notifications v19",
       project: PROJECT_ID,
       status: "online",
       schedule: SCHEDULE_URL,
@@ -1552,6 +1636,7 @@ export default {
         "protected manual test push endpoint",
         "Gulf Cup 27 prediction alerts",
         "Gulf Cup 27 automatic verified final results",
+        "Gulf Cup 27 multi-source score verification (ESPN + Sofascore + news consensus)",
         "Gulf Cup 27 manual result refresh endpoint",
         "UEFA Champions League automatic verified final results",
         "Gulf Cup 27 Oman-team news only",
