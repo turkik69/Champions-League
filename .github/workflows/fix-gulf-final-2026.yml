@@ -1,0 +1,70 @@
+name: Fix Gulf Cup final 2026
+on:
+  push:
+    paths:
+      - gulf-schedule.json
+
+jobs:
+  patch-worker:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Make final prediction alert recoverable
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('cloudflare-worker-v2.js')
+          s = p.read_text()
+
+          old_boot = '''        if (event.at <= now) boot[gulfEventKey(group,event.type)] = { done:true, bootstrapped:true, eventAt:event.at, at:now };'''
+          new_boot = '''        if (event.at <= now) {
+          const isFinalOpen = event.type === "open" && group.matches.some(m => m.stage === "final");
+          const lockAt = new Date(group.ko).getTime() - (schedule.predictionLockMinutesBeforeKickoff || 30) * 60_000;
+          if (!(isFinalOpen && now < lockAt)) {
+            boot[gulfEventKey(group,event.type)] = { done:true, bootstrapped:true, eventAt:event.at, at:now };
+          }
+        }'''
+          if old_boot not in s:
+              raise SystemExit('bootstrap pattern not found')
+          s = s.replace(old_boot, new_boot, 1)
+
+          old_done = '''      if (state[key]?.done) continue;
+      if (event.at<=now) due.push({group,event,key});'''
+          new_done = '''      if (state[key]?.done) {
+        const isFinalOpen = event.type === "open" && group.matches.some(m => m.stage === "final");
+        const lockAt = new Date(group.ko).getTime() - (schedule.predictionLockMinutesBeforeKickoff || 30) * 60_000;
+        const recoverSkippedFinalOpen = isFinalOpen && now < lockAt && !state[key]?.sentAt && (state[key]?.skippedLate || state[key]?.bootstrapped);
+        if (!recoverSkippedFinalOpen) continue;
+      }
+      if (event.at<=now) due.push({group,event,key});'''
+          if old_done not in s:
+              raise SystemExit('done-state pattern not found')
+          s = s.replace(old_done, new_done, 1)
+
+          old_late = '''  const maxLateMs=item.event.type==="open"?2*60*60_000:45*60_000;
+  if (now-item.event.at>maxLateMs) {'''
+          new_late = '''  const isFinalOpen = item.event.type === "open" && item.group.matches.some(m => m.stage === "final");
+  const finalLockAt = new Date(item.group.ko).getTime() - (schedule.predictionLockMinutesBeforeKickoff || 30) * 60_000;
+  const finalOpenStillValid = isFinalOpen && now < finalLockAt;
+  const maxLateMs=item.event.type==="open"?2*60*60_000:45*60_000;
+  if (!finalOpenStillValid && now-item.event.at>maxLateMs) {'''
+          if old_late not in s:
+              raise SystemExit('late-window pattern not found')
+          s = s.replace(old_late, new_late, 1)
+
+          s = s.replace('service: "UCL + Gulf Cup Push Notifications v19"', 'service: "UCL + Gulf Cup Push Notifications v20"')
+          p.write_text(s)
+          PY
+      - name: Commit worker update
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add cloudflare-worker-v2.js
+          if git diff --cached --quiet; then
+            echo "No changes"
+          else
+            git commit -m "Open Gulf Cup final predictions and recover late final alert"
+            git push
+          fi
