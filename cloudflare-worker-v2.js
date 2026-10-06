@@ -915,7 +915,13 @@ async function processGulfPredictionAlerts(accessToken) {
     const boot = { _initialized: { at: now, season: schedule.season || "2026" } };
     for (const group of groups) {
       for (const event of buildGulfEvents(group, schedule)) {
-        if (event.at <= now) boot[gulfEventKey(group,event.type)] = { done:true, bootstrapped:true, eventAt:event.at, at:now };
+        if (event.at <= now) {
+          const isFinalOpen = event.type === "open" && group.matches.some(m => m.stage === "final");
+          const lockAt = new Date(group.ko).getTime() - (schedule.predictionLockMinutesBeforeKickoff || 30) * 60_000;
+          if (!(isFinalOpen && now < lockAt)) {
+            boot[gulfEventKey(group,event.type)] = { done:true, bootstrapped:true, eventAt:event.at, at:now };
+          }
+        }
       }
     }
     await firebasePut("gulfCup27PushAlerts", boot, accessToken);
@@ -926,15 +932,23 @@ async function processGulfPredictionAlerts(accessToken) {
   for (const group of groups) {
     for (const event of buildGulfEvents(group, schedule)) {
       const key=gulfEventKey(group,event.type);
-      if (state[key]?.done) continue;
+      if (state[key]?.done) {
+        const isFinalOpen = event.type === "open" && group.matches.some(m => m.stage === "final");
+        const lockAt = new Date(group.ko).getTime() - (schedule.predictionLockMinutesBeforeKickoff || 30) * 60_000;
+        const recoverSkippedFinalOpen = isFinalOpen && now < lockAt && !state[key]?.sentAt && (state[key]?.skippedLate || state[key]?.bootstrapped);
+        if (!recoverSkippedFinalOpen) continue;
+      }
       if (event.at<=now) due.push({group,event,key});
     }
   }
   due.sort((a,b)=>a.event.at-b.event.at);
   if (!due.length) return { action:"gulf-alerts-idle" };
   const item=due[0];
+  const isFinalOpen = item.event.type === "open" && item.group.matches.some(m => m.stage === "final");
+  const finalLockAt = new Date(item.group.ko).getTime() - (schedule.predictionLockMinutesBeforeKickoff || 30) * 60_000;
+  const finalOpenStillValid = isFinalOpen && now < finalLockAt;
   const maxLateMs=item.event.type==="open"?2*60*60_000:45*60_000;
-  if (now-item.event.at>maxLateMs) {
+  if (!finalOpenStillValid && now-item.event.at>maxLateMs) {
     await firebasePut(`gulfCup27PushAlerts/${item.key}`,{done:true,skippedLate:true,eventAt:item.event.at,checkedAt:now},accessToken);
     return {action:"gulf-alert-skipped-late",key:item.key};
   }
@@ -1635,7 +1649,7 @@ export default {
 
     return json({
       ok: true,
-      service: "UCL + Gulf Cup Push Notifications v19.1",
+      service: "UCL + Gulf Cup Push Notifications v20",
       project: PROJECT_ID,
       status: "online",
       schedule: SCHEDULE_URL,
