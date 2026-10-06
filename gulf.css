@@ -5,3 +5,10 @@
 .refresh-results-btn{border:0;background:var(--green);color:#fff;border-radius:14px;padding:9px 12px;font:inherit;font-size:.74rem;font-weight:800;display:flex;align-items:center;gap:7px;box-shadow:0 8px 18px rgba(11,107,79,.18)}
 .refresh-results-btn svg{width:16px;height:16px}.refresh-results-btn:disabled{opacity:.65}.refresh-results-btn.loading svg{animation:gulfSpin .8s linear infinite}
 @keyframes gulfSpin{to{transform:rotate(360deg)}}
+
+/* Gulf Cup final knockout prediction flow */
+.final-match-card{border:1px solid rgba(214,178,94,.48);box-shadow:0 18px 46px rgba(11,107,79,.14)}
+.ko-predict{margin-top:14px;padding:14px;border-radius:18px;background:linear-gradient(180deg,#f6fbf8,#fffaf0);border:1px solid rgba(11,107,79,.12)}
+.ko-title{text-align:center;font-weight:900;color:var(--green);margin-bottom:10px}.ko-step{margin-top:10px;padding:10px;border-radius:14px;background:rgba(255,255,255,.75);border:1px solid var(--line)}
+.ko-step>span{display:block;text-align:center;font-size:.72rem;font-weight:800;color:var(--muted);margin-bottom:8px}.ko-step.pens{background:#fff8e8;border-color:rgba(214,178,94,.3)}
+.ko-save{width:100%;margin-top:12px}.ko-predict .predict-row{grid-template-columns:1fr 1fr}
