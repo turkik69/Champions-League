@@ -12,3 +12,7 @@
 .ko-title{text-align:center;font-weight:900;color:var(--green);margin-bottom:10px}.ko-step{margin-top:10px;padding:10px;border-radius:14px;background:rgba(255,255,255,.75);border:1px solid var(--line)}
 .ko-step>span{display:block;text-align:center;font-size:.72rem;font-weight:800;color:var(--muted);margin-bottom:8px}.ko-step.pens{background:#fff8e8;border-color:rgba(214,178,94,.3)}
 .ko-save{width:100%;margin-top:12px}.ko-predict .predict-row{grid-template-columns:1fr 1fr}
+
+.champion-archive-card{display:flex;align-items:center;gap:14px;background:linear-gradient(135deg,#fff8df,#fffdf8);border:1px solid rgba(214,178,94,.4);border-radius:22px;padding:17px;margin-bottom:14px;box-shadow:0 12px 30px rgba(120,89,22,.1)}
+.champion-crown{width:58px;height:58px;border-radius:18px;background:#fff;display:grid;place-items:center;font-size:2rem;box-shadow:0 8px 20px rgba(120,89,22,.12)}
+.champion-archive-card span{font-size:.72rem;font-weight:800;color:#9a7626}.champion-archive-card h2{margin:2px 0;font-size:1.25rem;color:var(--ink)}.champion-archive-card p{margin:0;color:var(--muted);font-size:.75rem;line-height:1.7}
