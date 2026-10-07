@@ -16,7 +16,7 @@
     <div class="hero-pattern"></div>
     <div class="hero-top">
       <button class="back-btn" onclick="window.parent && window.parent!==window && window.parent.closeGulfCup ? window.parent.closeGulfCup() : location.href='index.html'" aria-label="العودة"><i data-lucide="arrow-right"></i></button>
-      <div class="hero-pill">جدة 2026</div>
+      <div class="hero-pill">أرشيف · جدة 2026</div>
       <button class="icon-btn" id="notifyBtn" aria-label="الإشعارات"><i data-lucide="bell"></i></button>
     </div>
     <div class="hero-content">
@@ -42,11 +42,15 @@
     <section class="tab-pane active" id="tab-matches">
       <div class="section-head">
         <div><span class="kicker">الجدول الكامل</span><h2>مباريات خليجي 27</h2></div>
-        <button class="refresh-results-btn" id="refreshResultsBtn" onclick="manualRefreshResults()">
-          <i data-lucide="refresh-cw"></i><span>تحديث النتائج</span>
+        <button class="refresh-results-btn" id="refreshResultsBtn" disabled>
+          <i data-lucide="archive"></i><span>مؤرشفة</span>
         </button>
       </div>
-      <div class="notice-card"><i data-lucide="info"></i><span>الجدول يشمل دور المجموعات ونصف النهائي والنهائي. التوقعات تفتح تلقائيًا قبل كل مباراة بـ24 ساعة وتغلق قبلها بـ30 دقيقة.</span></div>
+      <div class="champion-archive-card">
+        <div class="champion-crown">🏆</div>
+        <div><span>بطل خليجي 27</span><h2>🇸🇦 السعودية</h2><p>فاز على الإمارات 2–0 في النهائي · اللقب الرابع · أول لقب منذ 2004</p></div>
+      </div>
+      <div class="notice-card"><i data-lucide="archive"></i><span>انتهت البطولة وتم أرشفتها. جميع النتائج والترتيب النهائي وتوقعات المشاركين محفوظة للرجوع إليها، ولا توجد توقعات أو إشعارات جديدة لهذه البطولة.</span></div>
       <div id="matchesList" class="matches-list"></div>
     </section>
 
@@ -91,6 +95,6 @@
 
   <div id="toast"></div>
 </div>
-<script src="gulf.js?v=8"></script>
+<script src="gulf.js?v=9"></script>
 </body>
 </html>
