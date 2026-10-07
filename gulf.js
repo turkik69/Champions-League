@@ -7,6 +7,9 @@ const TEAMS={
 const GROUPS={A:['السعودية','العراق','عُمان','الكويت'],B:['الإمارات','قطر','البحرين','اليمن']};
 const OFFICIAL_FINAL_GROUP_ORDER={A:['السعودية','عُمان','العراق','الكويت'],B:['الإمارات','قطر','اليمن','البحرين']};
 let MATCHES=[];
+let TOURNAMENT_STATUS='active';
+let ARCHIVE_META={};
+let OFFICIAL_RESULTS={};
 let currentUserId=localStorage.getItem(USER_KEY)||'';
 let myPreds={},allPreds={},results={},users={},newsItems=[];
 function el(id){return document.getElementById(id)}
@@ -14,7 +17,7 @@ async function fbGet(path){try{const r=await fetch(`${FB_URL}/${path}.json`);ret
 async function fbPut(path,val){try{const r=await fetch(`${FB_URL}/${path}.json`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(val)});return r.ok}catch{return false}}
 function fmtDate(iso){return new Intl.DateTimeFormat('ar-OM',{weekday:'long',day:'numeric',month:'long',hour:'numeric',minute:'2-digit',hour12:true,timeZone:'Asia/Muscat'}).format(new Date(iso))}
 function flag(name){return TEAMS[name]?.flag||'🏆'}
-function isOpen(m){if(m.predictable===false)return false;const now=Date.now(),ko=new Date(m.ko).getTime();return now>=ko-24*60*60*1000&&now<ko-30*60*1000}
+function isOpen(m){if(TOURNAMENT_STATUS==='archived'||m.predictable===false)return false;const now=Date.now(),ko=new Date(m.ko).getTime();return now>=ko-24*60*60*1000&&now<ko-30*60*1000}
 function isLocked(m){return Date.now()>=new Date(m.ko).getTime()-30*60*1000}
 function toast(t){const x=el('toast');if(!x)return;x.textContent=t;x.classList.add('show');clearTimeout(window.__gToast);window.__gToast=setTimeout(()=>x.classList.remove('show'),2200)}
 function stageName(m){if(m.stage==='semifinal')return 'نصف النهائي';if(m.stage==='final')return 'النهائي';return `الجولة ${m.md}`}
@@ -47,13 +50,13 @@ async function savePrediction(id){if(!currentUserId){el('loginGate')?.classList.
 function renderRanking(){const host=el('rankingList');if(!host)return;const rows=Object.entries(allPreds||{}).map(([uid,preds])=>{let pts=0,exact=0,correct=0;Object.entries(preds||{}).forEach(([mid,p])=>{const s=scorePrediction(p,results[mid]);pts+=s;if(s===3)exact++;else if(s===1)correct++});return{uid,name:users?.[uid]?.nickname||users?.[uid]?.name||'مشارك',pts,exact,correct,count:Object.keys(preds||{}).length}}).sort((a,b)=>b.pts-a.pts||b.exact-a.exact||a.name.localeCompare(b.name,'ar'));host.innerHTML=rows.length?rows.map((r,i)=>`<div class="rank-row ${r.uid===currentUserId?'me':''}"><span class="rank-no">${i+1}</span><div class="rank-name"><strong>${r.name}</strong><small>${r.count} توقع · ${r.exact} دقيقة</small></div><strong class="rank-pts">${r.pts} ن</strong></div>`).join(''):'<div class="empty-state">يظهر ترتيب التوقعات بعد حفظ أول توقع.</div>'}
 function renderNews(){const host=el('newsList');if(!host)return;host.innerHTML=(newsItems||[]).length?newsItems.map(n=>`<a class="news-card" href="${n.link||'#'}" target="_blank" rel="noopener"><span class="news-source">${n.source||'أخبار خليجي 27'}</span><strong>${n.title||''}</strong><small>${n.publishedAt?new Intl.DateTimeFormat('ar-OM',{day:'numeric',month:'short',hour:'numeric',minute:'2-digit'}).format(new Date(Number(n.publishedAt))):''}</small></a>`).join(''):'<div class="empty-state">سيتم تحديث أخبار البطولة والمنتخبات تلقائيًا هنا.</div>'}
 function setupTabs(){document.querySelectorAll('.gulf-tab').forEach(b=>b.addEventListener('click',()=>{document.querySelectorAll('.gulf-tab').forEach(x=>x.classList.remove('active'));document.querySelectorAll('.tab-pane').forEach(x=>x.classList.remove('active'));b.classList.add('active');el(`tab-${b.dataset.tab}`)?.classList.add('active');lucide?.createIcons()}))}
-function updateCountdown(){const start=new Date('2026-09-23T17:30:00+03:00').getTime(),d=start-Date.now();if(!el('countdown'))return;if(d<=0){el('countdown').textContent='البطولة انطلقت — أهلًا بالخليج 🇸🇦';return}const days=Math.floor(d/86400000),hrs=Math.floor((d%86400000)/3600000),mins=Math.floor((d%3600000)/60000);el('countdown').textContent=`متبقي على الافتتاح: ${days} يوم · ${hrs} ساعة · ${mins} دقيقة`}
+function updateCountdown(){if(!el('countdown'))return;if(TOURNAMENT_STATUS==='archived'){el('countdown').textContent='🏆 اختتمت البطولة — السعودية بطل خليجي 27 للمرة الرابعة';return}const start=new Date('2026-09-23T17:30:00+03:00').getTime(),d=start-Date.now();if(d<=0){el('countdown').textContent='البطولة انطلقت — أهلًا بالخليج 🇸🇦';return}const days=Math.floor(d/86400000),hrs=Math.floor((d%86400000)/3600000),mins=Math.floor((d%3600000)/60000);el('countdown').textContent=`متبقي على الافتتاح: ${days} يوم · ${hrs} ساعة · ${mins} دقيقة`}
 function backToMain(){if(window.parent&&window.parent!==window&&typeof window.parent.closeGulfCup==='function'){window.parent.closeGulfCup();return}location.href='index.html'}
 async function refreshGulfScoreboard(){
   try {
     const latest=await fbGet('gulfCup27Results');
     if(latest && JSON.stringify(latest)!==JSON.stringify(results)){
-      results=latest;
+      results={...latest,...OFFICIAL_RESULTS};
       renderGroups();
       renderMatches();
       renderRanking();
@@ -63,6 +66,7 @@ async function refreshGulfScoreboard(){
 async function manualRefreshResults(){
   const btn=el('refreshResultsBtn');
   if(!btn)return;
+  if(TOURNAMENT_STATUS==='archived'){toast('تم أرشفة خليجي 27 — النتائج نهائية ومحفوظة 🏆');return;}
   const original=btn.innerHTML;
   btn.disabled=true;
   btn.classList.add('loading');
@@ -97,5 +101,42 @@ async function manualRefreshResults(){
     lucide?.createIcons();
   }
 }
-async function init(){setupTabs();try{const s=await fetch(`gulf-schedule.json?v=${Date.now()}`,{cache:'no-store'}).then(r=>r.json());MATCHES=Array.isArray(s.matches)?s.matches:[]}catch{MATCHES=[]}const data=await Promise.all([currentUserId?fbGet(`gulfCup27Predictions/${currentUserId}`):Promise.resolve({}),fbGet('gulfCup27Predictions'),fbGet('gulfCup27Results'),fbGet('users'),fbGet('gulfCup27News/latest')]);myPreds=data[0]||{};allPreds=data[1]||{};results=data[2]||{};users=data[3]||{};const rawNews=data[4]||[];newsItems=Array.isArray(rawNews)?rawNews:Object.values(rawNews);renderGroups();renderTeams();renderMatches();renderRanking();renderNews();updateCountdown();setInterval(()=>{updateCountdown();renderMatches();if(!document.hidden)refreshGulfScoreboard()},60000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)refreshGulfScoreboard()});window.addEventListener('focus',refreshGulfScoreboard);setTimeout(()=>lucide?.createIcons(),100)}
+async function init(){
+  setupTabs();
+  let scheduleData={};
+  try{
+    scheduleData=await fetch(`gulf-schedule.json?v=${Date.now()}`,{cache:'no-store'}).then(r=>r.json());
+    MATCHES=Array.isArray(scheduleData.matches)?scheduleData.matches:[];
+    TOURNAMENT_STATUS=scheduleData.status||'active';
+    ARCHIVE_META=scheduleData;
+    OFFICIAL_RESULTS=scheduleData.officialResults||{};
+  }catch{
+    MATCHES=[];
+  }
+  const data=await Promise.all([
+    currentUserId?fbGet(`gulfCup27Predictions/${currentUserId}`):Promise.resolve({}),
+    fbGet('gulfCup27Predictions'),
+    fbGet('gulfCup27Results'),
+    fbGet('users'),
+    fbGet('gulfCup27News/latest')
+  ]);
+  myPreds=data[0]||{};
+  allPreds=data[1]||{};
+  results={...(data[2]||{}),...OFFICIAL_RESULTS};
+  users=data[3]||{};
+  const rawNews=data[4]||[];
+  newsItems=Array.isArray(rawNews)?rawNews:Object.values(rawNews);
+  renderGroups();renderTeams();renderMatches();renderRanking();renderNews();updateCountdown();
+  const refreshBtn=el('refreshResultsBtn');
+  if(refreshBtn&&TOURNAMENT_STATUS==='archived'){
+    refreshBtn.disabled=true;
+    refreshBtn.innerHTML='<i data-lucide="archive"></i><span>مؤرشفة</span>';
+  }
+  if(TOURNAMENT_STATUS!=='archived'){
+    setInterval(()=>{updateCountdown();renderMatches();if(!document.hidden)refreshGulfScoreboard()},60000);
+    document.addEventListener('visibilitychange',()=>{if(!document.hidden)refreshGulfScoreboard()});
+    window.addEventListener('focus',refreshGulfScoreboard);
+  }
+  setTimeout(()=>lucide?.createIcons(),100);
+}
 window.savePrediction=savePrediction;window.updateFinalPredictionFlow=updateFinalPredictionFlow;window.backToMain=backToMain;window.manualRefreshResults=manualRefreshResults;document.addEventListener('DOMContentLoaded',init);
