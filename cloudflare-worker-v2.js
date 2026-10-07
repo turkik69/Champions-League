@@ -1516,6 +1516,34 @@ async function processUclResults(accessToken){
     pending:pending.length,sources:state.sources,saved};
 }
 
+
+async function processGulfArchive(accessToken){
+  const archive=(await firebaseGet("gulfCup27Archive",accessToken))||{};
+  const official={
+    g27_sf1:{h:0,a:0,penH:3,penA:2,winner:"السعودية",decidedBy:"penalties",verifiedFinal:true,source:"official-archive"},
+    g27_sf2:{h:1,a:0,winner:"الإمارات",decidedBy:"regular",verifiedFinal:true,source:"official-archive"},
+    g27_final:{h:2,a:0,winner:"السعودية",decidedBy:"regular",verifiedFinal:true,source:"AFC/FIFA/Reuters",updatedAt:Date.now()}
+  };
+  if(archive.status==="archived" && Number(archive.finalH)===2 && Number(archive.finalA)===0){
+    return {action:"gulf-archived",champion:"السعودية",final:"2-0",writes:0};
+  }
+  for(const [id,result] of Object.entries(official)){
+    await firebasePut("gulfCup27Results/"+id,result,accessToken);
+  }
+  await firebasePut("gulfCup27Archive",{
+    status:"archived",
+    competition:"Gulf Cup 27",
+    champion:"السعودية",
+    runnerUp:"الإمارات",
+    titleCount:4,
+    finalH:2,
+    finalA:0,
+    completedAt:"2026-10-06T23:00:00+03:00",
+    archivedAt:Date.now()
+  },accessToken);
+  return {action:"gulf-archived-finalized",champion:"السعودية",final:"2-0",writes:4};
+}
+
 async function safeStep(name, fn) {
   try {
     return await fn();
@@ -1529,10 +1557,9 @@ async function processAll(env) {
   const results = [];
   results.push(await safeStep("ucl-prediction-alerts",()=>processPredictionAlerts(accessToken)));
   results.push(await safeStep("ucl-results-sync",()=>processUclResults(accessToken)));
-  results.push(await safeStep("gulf-prediction-alerts",()=>processGulfPredictionAlerts(accessToken)));
-  results.push(await safeStep("gulf-results-sync",()=>processGulfResults(accessToken)));
+  results.push(await safeStep("gulf-archive",()=>processGulfArchive(accessToken)));
   results.push(await safeStep("ucl-auto-round-news",()=>processAutomaticRoundNews(accessToken)));
-  results.push(await safeStep("gulf-oman-news",()=>processGulfNews(accessToken)));
+  results.push({action:"gulf-news-archived"});
   results.push(await safeStep("ucl-round-news-queue",()=>processRoundNewsQueue(accessToken)));
   results.push(await safeStep("announcements",()=>processAnnouncements(accessToken)));
   return results;
@@ -1632,8 +1659,8 @@ export default {
     if (url.searchParams.get("gulfRefresh") === "1") {
       try {
         const accessToken = await getAccessToken(env);
-        const result = await processGulfResults(accessToken, true);
-        return json({ ok: true, manualRefresh: true, result, time: new Date().toISOString() });
+        const result = await processGulfArchive(accessToken);
+        return json({ ok: true, manualRefresh: true, archived: true, result, time: new Date().toISOString() });
       } catch (error) {
         return json({ ok: false, manualRefresh: true, error: error?.message || String(error) }, 500);
       }
@@ -1649,7 +1676,7 @@ export default {
 
     return json({
       ok: true,
-      service: "UCL + Gulf Cup Push Notifications v20",
+      service: "UCL Push Notifications + Gulf Cup 27 Archive v21",
       project: PROJECT_ID,
       status: "online",
       schedule: SCHEDULE_URL,
@@ -1661,12 +1688,11 @@ export default {
         "fresh Arabic-first round news with relevance filters",
         "round news queue",
         "protected manual test push endpoint",
-        "Gulf Cup 27 prediction alerts",
-        "Gulf Cup 27 automatic verified final results",
-        "Gulf Cup 27 multi-source score verification (ESPN + Sofascore + news consensus)",
-        "Gulf Cup 27 manual result refresh endpoint",
+        "Gulf Cup 27 archived — notifications stopped",
+        "Gulf Cup 27 final archive: Saudi Arabia 2-0 UAE",
+        "Gulf Cup 27 champion: Saudi Arabia (4th title)",
         "UEFA Champions League automatic verified final results",
-        "Gulf Cup 27 Oman-team news only",
+        "Gulf Cup 27 archived results retained",
       ],
       debugUrl: "/?run=1",
       time: new Date().toISOString(),
