@@ -147,7 +147,7 @@ async function sendFCM(deviceToken, title, body, tag, accessToken, data = {}) {
               icon: APP_ICON,
               badge: APP_ICON,
               tag: String(tag),
-              renotify: true,
+              renotify: false,
             },
             fcm_options: { link: targetUrl },
           },
@@ -163,8 +163,15 @@ async function sendFCM(deviceToken, title, body, tag, accessToken, data = {}) {
 
 async function getEnabledDevices(accessToken) {
   const pushTokens = (await firebaseGet("uclPushTokens", accessToken)) || {};
+  const seenTokens = new Set();
   return Object.entries(pushTokens)
-    .filter(([, device]) => device && device.token && device.enabled !== false)
+    .filter(([, device]) => {
+      if (!device || !device.token || device.enabled === false) return false;
+      const token = String(device.token).trim();
+      if (!token || seenTokens.has(token)) return false;
+      seenTokens.add(token);
+      return true;
+    })
     .slice(0, MAX_DEVICES_PER_RUN);
 }
 
@@ -340,6 +347,18 @@ async function processPredictionAlerts(accessToken) {
     return { action: "prediction-alert-skipped-late", key: item.key };
   }
 
+  // Claim the event before sending. This prevents overlapping cron runs
+  // from broadcasting the same reminder/open/lock notification twice.
+  await firebasePut(`uclPredictionAlerts/${item.key}`, {
+    done: true,
+    claimed: true,
+    eventType: item.event.type,
+    eventAt: item.event.at,
+    kickoff: item.group.ko,
+    matchday: item.group.md,
+    claimedAt: Date.now(),
+  }, accessToken);
+
   const result = await broadcast(
     item.event.title,
     item.event.body,
@@ -352,15 +371,12 @@ async function processPredictionAlerts(accessToken) {
     }
   );
 
-  await firebasePut(`uclPredictionAlerts/${item.key}`, {
-    done: true,
-    eventType: item.event.type,
-    eventAt: item.event.at,
-    kickoff: item.group.ko,
-    matchday: item.group.md,
+  await firebasePatch(`uclPredictionAlerts/${item.key}`, {
     sentAt: Date.now(),
-    ...result,
-  }, accessToken);
+    successful: result.successful || 0,
+    failed: result.failed || 0,
+    totalDevices: result.totalDevices || 0,
+  }, accessToken).catch(() => {});
 
   return { action: `prediction-${item.event.type}-sent`, key: item.key, ...result };
 }
@@ -1676,7 +1692,7 @@ export default {
 
     return json({
       ok: true,
-      service: "UCL Push Notifications + Gulf Cup 27 Archive v21",
+      service: "UCL Push Notifications + Gulf Cup 27 Archive v22",
       project: PROJECT_ID,
       status: "online",
       schedule: SCHEDULE_URL,
@@ -1685,6 +1701,7 @@ export default {
         "prediction opening alerts (24h)",
         "prediction reminders (1h)",
         "prediction lock alerts (30m)",
+        "duplicate-push protection (token dedupe + pre-send claim)",
         "fresh Arabic-first round news with relevance filters",
         "round news queue",
         "protected manual test push endpoint",
