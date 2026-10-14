@@ -419,6 +419,7 @@ async function saveProfileSettings(){
 // SCORING — لم يتغيّر منطق الاحتساب إطلاقاً
 // ════════════════════════════════════════════
 function outcome(h,a){ return h>a?'h':a>h?'a':'d'; }
+function displayScoreRTL(h,a){ return `${a} - ${h}`; }
 function pts(pred,res){
   if(!res||!pred) return null;
   if(pred.h===res.h && pred.a===res.a) return 3;
@@ -549,7 +550,7 @@ function buildMatchCard(m){
   const res = DB.uclResults[m.id];
   const myPred = DB.uclPredictions[currentUser.id]?.[m.id];
   const badge = buildStatusBadge(status);
-  const scoreHTML = res ? `<div class="score-result">${res.h} - ${res.a}</div>` : `<span class="vs-chip">VS</span>`;
+  const scoreHTML = res ? `<div class="score-result" dir="ltr">${displayScoreRTL(res.h,res.a)}</div>` : `<span class="vs-chip">VS</span>`;
 
   let cdHTML = '';
   if(status==='open'){
@@ -576,7 +577,7 @@ function buildMatchCard(m){
       if(v===3) ptsBadge = `<span class="pts-chip pts-3"><i data-lucide="target" class="icon-sm"></i> +3</span>`;
       else if(v===1) ptsBadge = `<span class="pts-chip pts-1"><i data-lucide="check" class="icon-sm"></i> +1</span>`;
       else ptsBadge = `<span class="pts-chip pts-0"><i data-lucide="x" class="icon-sm"></i> 0</span>`;
-      extraRow = `<div class="compare-row"><span class="t-meta">النتيجة الحقيقية</span><span class="t-num" style="font-size:.9rem">${res.h} - ${res.a}</span></div>`;
+      extraRow = `<div class="compare-row"><span class="t-meta">النتيجة الحقيقية</span><span class="t-num" dir="ltr" style="font-size:.9rem">${displayScoreRTL(res.h,res.a)}</span></div>`;
     } else {
       ptsBadge = `<span class="pts-chip pts-pending"><i data-lucide="lock" class="icon-sm"></i> سري</span>`;
     }
@@ -584,7 +585,7 @@ function buildMatchCard(m){
       <div class="my-pred-box">
         <div class="result-compare" style="flex:1">
           ${extraRow}
-          <div class="compare-row"><span class="pred-label-row"><i data-lucide="check-circle" class="icon-sm"></i> توقعك</span><span class="pred-score-big">${myPred.h} - ${myPred.a}</span></div>
+          <div class="compare-row"><span class="pred-label-row"><i data-lucide="check-circle" class="icon-sm"></i> توقعك</span><span class="pred-score-big" dir="ltr">${displayScoreRTL(myPred.h,myPred.a)}</span></div>
         </div>
         ${ptsBadge}
       </div>
@@ -715,7 +716,7 @@ function renderAdmin(){
   document.getElementById('adminMatches').innerHTML = list.map(m=>{
     const r = DB.uclResults[m.id];
     return `<div class="admin-match-row">
-      <div class="admin-match-title">${r?`<span class="result-badge">${r.h}-${r.a}</span>`:''}${clubBadge(m.home,22)} ${m.home} <span style="color:var(--muted-dim)">vs</span> ${m.away} ${clubBadge(m.away,22)}</div>
+      <div class="admin-match-title">${r?`<span class="result-badge" dir="ltr">${displayScoreRTL(r.h,r.a)}</span>`:''}${clubBadge(m.home,22)} ${m.home} <span style="color:var(--muted-dim)">vs</span> ${m.away} ${clubBadge(m.away,22)}</div>
       <div class="admin-score-row">
         <input class="admin-inp" type="number" id="ah_${m.id}" value="${r?.h??''}" min="0" placeholder="0">
         <span style="color:var(--muted)">-</span>
