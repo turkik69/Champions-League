@@ -246,9 +246,42 @@ const MATCHES = [
 
 let DB = { users:{}, uclPredictions:{}, uclResults:{}, announcements:{} };
 let currentUser = null;
-let currentMD = 2; // أول جولة قابلة للتوقع
+let currentMD = 2;
 
 function now(){ return new Date(); }
+
+// يختار الجولة الأنسب تلقائياً عند فتح التطبيق:
+// 1) الجولة التي يوجد بها توقع مفتوح الآن.
+// 2) إن لم توجد، أقرب جولة قادمة.
+// 3) بعد انتهاء كل الجولات، آخر جولة في الموسم.
+function selectCurrentMatchdayOnOpen(){
+  const t=Date.now();
+  const openMatches=MATCHES
+    .filter(m=>{
+      if(DB.uclResults[m.id]) return false;
+      const ko=new Date(m.ko).getTime();
+      return t>=ko-24*60*60*1000 && t<ko-30*60*1000;
+    })
+    .sort((a,b)=>new Date(a.ko)-new Date(b.ko));
+
+  if(openMatches.length){
+    currentMD=Number(openMatches[0].md);
+    return currentMD;
+  }
+
+  const upcoming=MATCHES
+    .filter(m=>!DB.uclResults[m.id] && new Date(m.ko).getTime()>t)
+    .sort((a,b)=>new Date(a.ko)-new Date(b.ko));
+
+  if(upcoming.length){
+    currentMD=Number(upcoming[0].md);
+    return currentMD;
+  }
+
+  const available=[...new Set(MATCHES.map(m=>Number(m.md)).filter(Number.isFinite))].sort((a,b)=>a-b);
+  currentMD=available.length?available[available.length-1]:2;
+  return currentMD;
+}
 // يستدعي مكتبة الأيقونات بعد كل تحديث للواجهة (Lucide يحتاج استدعاءً يدوياً بعد كل innerHTML جديد)
 function paintIcons(){ if(window.lucide) lucide.createIcons(); }
 
@@ -908,6 +941,7 @@ function checkReminders(){
 
 window.addEventListener('DOMContentLoaded', async ()=>{
   await loadDatabase();
+  selectCurrentMatchdayOnOpen();
   checkSession();
   document.getElementById('loadingOverlay').style.display='none';
   checkReminders();
